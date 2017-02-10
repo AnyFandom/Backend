@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from aiohttp import web
+from ..utils import web
 
 
-class RootView(web.View):
+class RootView(web.BaseView):
     async def get(self):
-        return web.Response(text='It works!')
+        return web.JsonResponse({'it': 'works'})
