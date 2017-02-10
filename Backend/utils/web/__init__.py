@@ -2,5 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from . import exceptions
-from .response import JsonResponse
+from . import middlewares
 from .rewrites import BaseView
+from .response import JsonResponse

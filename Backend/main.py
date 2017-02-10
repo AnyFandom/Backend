@@ -7,10 +7,13 @@ import uvloop
 from aiohttp import web
 
 from .views import RootView
+from .utils.web import middlewares
 
 
 def create_app(loop: asyncio.AbstractEventLoop) -> web.Application:
-    app = web.Application(loop=loop)
+    app = web.Application(loop=loop, middlewares=[
+        middlewares.error_middleware
+    ])
 
     app.router.add_route('*', '/', RootView)
 

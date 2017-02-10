@@ -21,5 +21,3 @@ class BaseView(web.View):
     async def options(self):
         return JsonResponse(
             headers={'Allow': ', '.join(sorted(self._allowed_methods))})
-
-
