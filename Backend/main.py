@@ -13,7 +13,8 @@ from .utils.web import middlewares
 
 async def create_app(loop: asyncio.AbstractEventLoop) -> web.Application:
     app = web.Application(loop=loop, middlewares=[
-        middlewares.error_middleware
+        middlewares.error_middleware,
+        middlewares.database_middleware
     ])
 
     app.router.add_route('*', '/', RootView)
