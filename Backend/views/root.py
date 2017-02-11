@@ -6,4 +6,10 @@ from ..utils import web
 
 class RootView(web.BaseView):
     async def get(self):
-        return web.JsonResponse({'it': 'works'})
+        conn = await self.request.app['db'].acquire()
+
+        resp = await conn.fetchrow("SELECT 'testing testing 123' AS test")
+
+        await self.request.app['db'].release(conn)
+
+        return web.JsonResponse({'test': resp['test']})

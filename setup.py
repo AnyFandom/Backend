@@ -19,7 +19,8 @@ setup(
     install_requires=[
         'click==6.7',
         'uvloop==0.8.0',
-        'aiohttp==1.3.1'
+        'aiohttp==1.3.1',
+        'asyncpg==0.8.4'
     ],
 
     entry_points={'console_scripts': ['backend=Backend.__main__:cli']},
