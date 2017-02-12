@@ -32,7 +32,6 @@ setup(
 
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
-        'Natural Language :: Russian',
         'Operating System :: POSIX'
         'Programming Language :: Python :: 3.6',
     ]

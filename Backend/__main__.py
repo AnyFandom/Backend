@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from os import path, pathsep, getenv
+import os
 import errno
 
 import click
@@ -38,20 +38,25 @@ def cli():
 def run(config_path, port):
     """Read config and run backend"""
     if config_path is None:
-        path_list = list()
-        path_list.append(path.join(
-            getenv('XDG_CONFIG_HOME', path.expanduser('~/.config')), 'backend'
-        ))
-        for p in getenv('XDG_CONFIG_DIRS', '/etc/xdg').split(pathsep):
-            path_list.append(path.join(p, 'backend'))
+        path_list = [
+            os.path.join(x, 'backend') for x in [
+                os.getenv('XDG_CONFIG_HOME', os.path.expanduser('~/.config')),
+                *os.getenv('XDG_CONFIG_DIRS', '/etc/xdg').split(os.pathsep)
+            ]
+        ]
 
         for p in path_list:
-            if path.isfile(path.join(p, 'config.ini')):
-                config_path = path.join(p, 'config.ini')
+            if os.path.isfile(os.path.join(p, 'config.ini')):
+                config_path = os.path.join(p, 'config.ini')
                 break
         else:
             msg = 'Can\'t find config.ini in any of these directories: ' + \
                   ', '.join(path_list)
+            raise FileNotFoundError(errno.ENOENT, msg)
+    else:
+        config_path = os.path.abspath(config_path)
+        if not os.path.isfile(config_path):
+            msg = 'No such file: ' + config_path
             raise FileNotFoundError(errno.ENOENT, msg)
 
     config = ConfigObj(config_path, configspec=spec)
