@@ -3,7 +3,7 @@
 
 import json
 
-from aiohttp import web, hdrs
+from aiohttp import web, hdrs, web_urldispatcher
 from multidict import CIMultiDict
 
 
@@ -23,7 +23,42 @@ class JsonResponse(web.Response):
                          headers=headers, **kwargs)
 
 
-from .exceptions import MethodNotAllowed  # noqa
+# Да, мне стыдно
+from .exceptions import (ResourceNotFound, MethodNotAllowed,
+                         ExpectationFailed)  # noqa
+
+
+class Router(web_urldispatcher.UrlDispatcher):
+    async def resolve(self, request):
+        allowed_methods = set()
+
+        for resource in self._resources:
+            match_dict, allowed = await resource.resolve(request)
+            if match_dict is not None:
+                return match_dict
+            else:
+                allowed_methods |= allowed
+        else:
+            if allowed_methods:
+                return web_urldispatcher.MatchInfoError(
+                    MethodNotAllowed(allowed_methods))
+            else:
+                return web_urldispatcher.MatchInfoError(
+                    ResourceNotFound())
+
+    def add_route(self, method, path, handler,
+                  *, name=None, expect_handler=None):
+        resource = self.add_resource(path, name=name)
+        return resource.add_route(method, handler,
+                                  expect_handler=_expect_handler)
+
+async def _expect_handler(request):
+    expect = request.headers.get(hdrs.EXPECT)
+    if request.version == web_urldispatcher.HttpVersion11:
+        if expect.lower() == "100-continue":
+            request.transport.write(b"HTTP/1.1 100 Continue\r\n\r\n")
+        else:
+            return ExpectationFailed(expect)
 
 
 class BaseView(web.View):

@@ -9,12 +9,12 @@ from aiohttp import web
 from .views import RootView
 
 from .utils import DB
-from .utils.web import middlewares
+from .utils.web import middlewares, Router
 
 
 async def create_app(loop: asyncio.AbstractEventLoop,
                      config: dict) -> web.Application:
-    app = web.Application(loop=loop, middlewares=[
+    app = web.Application(loop=loop, router=Router(), middlewares=[
         middlewares.error_middleware,
         middlewares.database_middleware
     ])
