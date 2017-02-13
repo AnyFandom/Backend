@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from ..utils.web.rewrites import BaseView
-from ..utils.web.response import JsonResponse
+from ..utils.web import BaseView, JsonResponse
 
 
 class RootView(BaseView):

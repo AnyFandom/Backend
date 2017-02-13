@@ -3,7 +3,7 @@
 
 from aiohttp import hdrs
 
-from .response import JsonResponse
+from .rewrites import JsonResponse
 
 
 class JsonException(JsonResponse, Exception):
@@ -33,10 +33,10 @@ class MethodNotAllowed(FailException):
     status_code = 405
     description = 'This resource does not support the specified HTTP method.'
 
-    def __init__(self, allowed_methods: str, **kwargs):
+    def __init__(self, allowed_methods: set, **kwargs):
         super().__init__(**kwargs)
 
-        self.headers[hdrs.ALLOW] = allowed_methods
+        self.headers[hdrs.ALLOW] = ', '.join(sorted(allowed_methods))
 
 
 class ExpectationFailed(FailException):

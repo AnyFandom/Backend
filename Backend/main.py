@@ -7,7 +7,8 @@ import uvloop
 from aiohttp import web
 
 from .views import RootView
-from .utils.db import DB
+
+from .utils import DB
 from .utils.web import middlewares
 
 
