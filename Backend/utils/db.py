@@ -27,7 +27,7 @@ class DB:
     def acquire(self) -> asyncpg.pool.PoolAcquireContext:
         return self._pool.acquire()
 
-    async def release(self, conn: asyncpg.pool.PoolAcquireContext):
+    async def release(self, conn: asyncpg.connection.Connection):
         await self._pool.release(conn)
 
     async def close(self):
