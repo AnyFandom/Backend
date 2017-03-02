@@ -11,8 +11,11 @@ class JsonException(JsonResponse, Exception):
     status_code = None
     description = None
 
-    def __init__(self, *, headers=None, reason=None):
+    def __init__(self, *, headers=None, reason=None, details=None):
         body = {'code': type(self).__name__, 'description': self.description}
+
+        if details:
+            body['details'] = details
 
         JsonResponse.__init__(self, body=body, status=self.status,
                               headers=headers, reason=reason,
@@ -22,6 +25,12 @@ class JsonException(JsonResponse, Exception):
 
 class FailException(JsonException):
     status = 'fail'
+
+
+class ValidationError(FailException):
+    status_code = 400
+    description = 'One or multiple required parameters were not ' \
+                  'transferred or invalid. See "details" for details.'
 
 
 class ResourceNotFound(FailException):
@@ -47,6 +56,12 @@ class ExpectationFailed(FailException):
         self.description %= expect
 
         super().__init__(**kwargs)
+
+
+class InvalidJson(FailException):
+    status_code = 422
+    description = 'There is no JSON in the body of the request or it is ' \
+                  'invalid. See "details" for details.'
 
 
 class ErrorException(JsonException):

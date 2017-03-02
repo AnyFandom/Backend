@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import traceback
 
 from aiohttp import web, errors
 
@@ -19,6 +20,8 @@ async def error_middleware(app: web.Application, handler):
         except (web.HTTPException, JsonException) as exc:
             resp = exc
         except Exception:
+            tb = traceback.format_exc()
+            print(tb)
             resp = InternalServerError()
 
         return resp
