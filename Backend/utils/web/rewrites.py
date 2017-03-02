@@ -2,9 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import json
+from datetime import datetime
 
 from aiohttp import web, hdrs, web_urldispatcher
 from multidict import CIMultiDict
+
+
+class Encoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        super().default(o)
+
+    def __call__(self, *args, **kwargs):
+        return self.encode(*args, **kwargs)
 
 
 class JsonResponse(web.Response):
@@ -17,7 +28,8 @@ class JsonResponse(web.Response):
         headers[hdrs.CONTENT_TYPE] = 'application/json; charset=utf-8'
 
         if body is not None:
-            body = json.dumps({'status': status, 'data': body}).encode('utf-8')
+            body = Encoder(indent=4)(
+                {'status': status, 'data': body}).encode('utf-8')
 
         super().__init__(body=body, status=status_code,
                          headers=headers, **kwargs)
