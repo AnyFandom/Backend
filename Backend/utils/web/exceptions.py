@@ -38,6 +38,11 @@ class ResourceNotFound(FailException):
     description = 'The specified resource does not exists.'
 
 
+class UserDoesNotExists(FailException):
+    status_code = 404
+    description = 'User with specified ID or username does not exists.'
+
+
 class MethodNotAllowed(FailException):
     status_code = 405
     description = 'This resource does not support the specified HTTP method.'
@@ -46,6 +51,11 @@ class MethodNotAllowed(FailException):
         super().__init__(**kwargs)
 
         self.headers[hdrs.ALLOW] = ', '.join(sorted(allowed_methods))
+
+
+class UsernameAlreadyTaken(FailException):
+    status_code = 409
+    description = 'This username is already taken.'
 
 
 class ExpectationFailed(FailException):

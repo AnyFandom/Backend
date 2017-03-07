@@ -6,7 +6,7 @@ import asyncio
 import uvloop
 from aiohttp import web
 
-from .views import RootView
+from .views import auth, RootView, UserView, UserListView
 
 from .utils import DB
 from .utils.web import middlewares, Router
@@ -19,7 +19,15 @@ async def create_app(loop: asyncio.AbstractEventLoop,
         middlewares.database_middleware
     ])
 
-    app.router.add_route('*', '/', RootView)
+    url = app.router.add_route
+
+    url('*', '/', RootView)
+
+    url('POST', '/auth/register', auth.register)
+
+    url('*', '/users', UserListView)
+    url('*', '/users/{first:(u)}/{second:\w+}', UserView)  # URL
+    url('*', '/users/{first:\w+}', UserView)               # ID | CURRENT
 
     app['cfg'] = config
     app['db'] = await DB.init(loop=loop, **config['db'])
