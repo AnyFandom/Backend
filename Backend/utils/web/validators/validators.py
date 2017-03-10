@@ -31,6 +31,11 @@ def string(val: Any, mn: int=None, mx: int=None) -> str:
     return val
 
 
+def integer(val: Any) -> int:
+    _check(isinstance(val, int), 'Expected int, got %s' % type(val).__name__)
+    return val
+
+
 class Field:
     def __init__(self, required: bool, name: str, func: FunctionType, **args):
         self.name = name

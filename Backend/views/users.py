@@ -4,7 +4,7 @@
 import asyncpg
 
 from ..utils import db
-from ..utils.web import BaseView, JsonResponse
+from ..utils.web import BaseView, JsonResponse, validators as v
 from ..utils.web.exceptions import UserDoesNotExists, Forbidden
 
 
@@ -36,3 +36,12 @@ class UserListView(BaseView):
 class UserView(BaseView):
     async def get(self):
         return JsonResponse(await _id_u(self.request))
+
+    async def patch(self):
+        if self.request.uid is None:
+            raise Forbidden
+        body = await v.get_body(self.request, v.users.patch)
+        await db.users.patch_users(self.request.conn, self.request.uid,
+                                   body.pop('id'), body)
+
+        return JsonResponse()

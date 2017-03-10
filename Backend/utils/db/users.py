@@ -3,7 +3,8 @@
 
 import asyncpg
 
-_sqls = {'get_users': "SELECT * FROM users"}
+_sqls = {'get_users': "SELECT * FROM users",
+         'patch_users': "SELECT * FROM users_update($1,$2,$3,$4)"}
 
 async def get_users(conn: asyncpg.connection.Connection, *ids: str,
                     u: bool=False) -> list:
@@ -25,6 +26,16 @@ async def get_users(conn: asyncpg.connection.Connection, *ids: str,
             edited_at=x['edited_at'],
             edited_by=x['edited_by'],
             username=x['username'],
-            description=x['description']
+            description=x['description'],
+            avatar=x['avatar']
         )
     ) for x in resp]
+
+
+async def patch_users(conn: asyncpg.connection.Connection, uid: id,
+                      id_: int, fields):
+    if not fields:
+        return
+
+    await conn.execute(_sqls['patch_users'], uid, id_,
+                       fields.get('description'), fields.get('avatar'))

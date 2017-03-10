@@ -26,12 +26,13 @@ CREATE TABLE "user_versions" (
     id            BIGINT                    NOT NULL,
     edited_at     TIMESTAMPTZ DEFAULT now() NOT NULL,
     edited_by     BIGINT                    NOT NULL,
-    description   TEXT DEFAULT ''           NOT NULL
+    description   TEXT DEFAULT ''           NOT NULL,
+    avatar        VARCHAR(64) DEFAULT ''    NOT NULL
 );
 
 CREATE VIEW "users" AS (
     SELECT us.id, us.created_at, uv.edited_at, uv.edited_by,
-           us.username, uv.description
+           us.username, uv.description, uv.avatar
       FROM "user_statics" as us
            INNER JOIN "user_versions" as uv
            ON uv.id = us.id
@@ -52,11 +53,12 @@ CREATE OR REPLACE FUNCTION users_functions() RETURNS TRIGGER AS $function$
 
         RETURN NEW;
       ELSIF TG_OP = 'UPDATE' THEN
-        IF (NEW.description) = (OLD.description) THEN
+        IF (NEW.description, NEW.avatar) = (OLD.description, OLD.avatar) THEN
           RETURN NULL;
         ELSE
-          INSERT INTO "user_versions" (id, edited_at, edited_by, description)
-          VALUES (OLD.id, now(), NEW.edited_by, NEW.description);
+          INSERT INTO "user_versions" (id, edited_at, edited_by, description,
+                                       avatar)
+          VALUES (OLD.id, now(), NEW.edited_by, NEW.description, NEW.avatar);
 
           RETURN NEW;
         END IF;
@@ -83,6 +85,23 @@ CREATE OR REPLACE FUNCTION users_create(
       VALUES (currval('user_statics_id_seq'), usern, passh);
 
       RETURN currval('user_statics_id_seq');
+    END;
+  $function$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION users_update(
+  tid   BIGINT,
+  uid   BIGINT,
+  descr TEXT,
+  avatr VARCHAR(64)
+) RETURNS BOOLEAN AS $function$
+    BEGIN
+      IF tid != uid THEN RETURN FALSE; END IF;  -- TODO: Сделать нормальную проверку
+      UPDATE users SET
+        edited_at = DEFAULT, edited_by = uid,
+        description = COALESCE(descr, description),
+        avatar = COALESCE(avatr, avatar)
+      WHERE id = tid;
+      RETURN TRUE;
     END;
   $function$ LANGUAGE plpgsql;
 
