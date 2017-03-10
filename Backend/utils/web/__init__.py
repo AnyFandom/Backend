@@ -3,5 +3,5 @@
 
 from .rewrites import JsonResponse, Router, BaseView
 
-__all__ = ('exceptions', 'middlewares', 'validators',
+__all__ = ('exceptions', 'middlewares', 'validators', 'other',
            'JsonResponse', 'Router', 'BaseView')

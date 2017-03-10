@@ -10,7 +10,8 @@ from validate import Validator, ValidateError
 
 from .main import main
 
-spec = """jwt_key = string()
+spec = """access_key = string()
+refresh_key = string()
 hmac_key = string()
 
 [server]

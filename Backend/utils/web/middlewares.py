@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import hmac
+import base64
 import asyncio
 import traceback
 
@@ -9,6 +11,7 @@ from aiohttp import web, errors, web_reqrep
 
 from .exceptions import (JsonException, InternalServerError,
                          InvalidAccess, ExpiredAccess, InvalidHeaderValue)
+from .other import hash_host
 
 
 async def error_middleware(app: web.Application, handler):
@@ -37,9 +40,13 @@ async def auth_middleware(app: web.Application, handler):
             if auth[0] != 'Token':
                 raise InvalidHeaderValue
             try:
-                request.uid = jwt.decode(
-                    auth[1], key=app['cfg']['jwt_key']
-                )['id']
+                decoded = jwt.decode(
+                    auth[1], key=app['cfg']['access_key']
+                )
+                host_digest = base64.b64decode(decoded['for'])
+                if not hmac.compare_digest(host_digest, hash_host(request)):
+                    raise InvalidAccess
+                request.uid = decoded['id']
             except IndexError:
                 raise InvalidHeaderValue
             except jwt.DecodeError:

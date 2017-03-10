@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import hashlib
-import hmac
 import time
+import base64
 
 import jwt
 
@@ -12,16 +11,7 @@ from ..utils.web import JsonResponse
 from ..utils.web import validators as v
 from ..utils.web.exceptions import (InvalidRefresh, ExpiredRefresh,
                                     NotYetImplemented)
-
-
-def get_host(request) -> str:
-    """Выдирает hostname из request"""
-    # Когда будем пихать бэкенд под Nginx, надо поменять
-    peername = request.transport.get_extra_info('peername')
-    if peername is not None:
-        return peername[0]
-    else:  # На всякий случай
-        raise Exception('idk what happend')
+from ..utils.web.other import hash_host
 
 
 async def register(request):
@@ -44,22 +34,16 @@ async def login(request):
         request.conn, body['username'], body['password']
     )
 
-    host = get_host(request)
-
-    hashed_ip = hmac.new(
-        request.app['cfg']['hmac_key'].encode(),
-        host.encode(), hashlib.sha1
-    ).hexdigest()
-
     t = int(time.time())
 
     return JsonResponse({
         'refresh_token': jwt.encode({
             'id': i, 'random': r, 'exp': t + 2419200  # 28 дней
-        }, key=request.app['cfg']['jwt_key']).decode(),
+        }, key=request.app['cfg']['refresh_key']).decode(),
         'access_token': jwt.encode({
-            'id': i, 'for': hashed_ip, 'exp': t + 600  # 10 минут
-        }, key=request.app['cfg']['jwt_key']).decode()
+            'id': i, 'exp': t + 600,  # 10 минут
+            'for': base64.b64encode(hash_host(request)).decode('utf-8')
+        }, key=request.app['cfg']['access_key']).decode()
     })
 
 
@@ -69,7 +53,7 @@ async def refresh(request):
 
     try:
         decoded = jwt.decode(
-            body['refresh_token'], key=request.app['cfg']['jwt_key']
+            body['refresh_token'], key=request.app['cfg']['refresh_key']
         )
     except jwt.DecodeError:
         raise InvalidRefresh
@@ -79,18 +63,11 @@ async def refresh(request):
     if await db.auth.check_random(
             request.conn, decoded['id'], decoded['random']
     ):
-        host = get_host(request)
-
-        hashed_ip = hmac.new(
-            request.app['cfg']['hmac_key'].encode(),
-            host.encode(), hashlib.sha1
-        ).hexdigest()
-
         return JsonResponse({
             'access_token': jwt.encode({
-                'id': decoded['id'], 'for': hashed_ip,
-                'exp': int(time.time()) + 600
-            }, key=request.app['cfg']['jwt_key']).decode()
+                'id': decoded['id'], 'exp': int(time.time()) + 600,
+                'for': base64.b64encode(hash_host(request)).decode('utf-8')
+            }, key=request.app['cfg']['access_key']).decode()
         })
     else:
         raise InvalidRefresh
