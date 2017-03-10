@@ -16,6 +16,7 @@ async def create_app(loop: asyncio.AbstractEventLoop,
                      config: dict) -> web.Application:
     app = web.Application(loop=loop, router=Router(), middlewares=[
         middlewares.error_middleware,
+        middlewares.auth_middleware,
         middlewares.database_middleware
     ])
 

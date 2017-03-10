@@ -48,6 +48,28 @@ class ExpiredRefresh(FailException):
     description = 'This refresh token has expired.'
 
 
+class InvalidAccess(FailException):
+    status_code = 400
+    description = 'The specified access token is invalid.'
+
+
+class ExpiredAccess(FailException):
+    status_code = 400
+    description = 'This access token has expired.'
+
+
+class InvalidHeaderValue(FailException):
+    status_code = 400
+    description = 'The value provided for one of the ' \
+                  'HTTP headers was not in the correct format.'
+
+
+class Forbidden(FailException):
+    status_code = 403
+    description = 'You do not have sufficient ' \
+                  'permissions to perform this operation.'
+
+
 class ResourceNotFound(FailException):
     status_code = 404
     description = 'The specified resource does not exists.'
