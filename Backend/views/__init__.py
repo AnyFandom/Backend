@@ -2,6 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from .root import RootView
-from .users import UserView, UserListView
+from .users import UserView, UserListView, UserHistoryView
 
-__all__ = ('auth', 'RootView', 'UserView', 'UserListView')
+__all__ = ('auth', 'root', 'users', 'UserListView', 'UserHistoryView')

@@ -95,7 +95,9 @@ CREATE OR REPLACE FUNCTION users_update(
   avatr VARCHAR(64)
 ) RETURNS BOOLEAN AS $function$
     BEGIN
-      IF tid != uid THEN RETURN FALSE; END IF;  -- TODO: Сделать нормальную проверку
+      IF tid != uid THEN  -- TODO: Сделать нормальную проверку
+        RETURN FALSE;
+      END IF;
       UPDATE users SET
         edited_at = DEFAULT, edited_by = uid,
         description = COALESCE(descr, description),
@@ -105,3 +107,22 @@ CREATE OR REPLACE FUNCTION users_update(
     END;
   $function$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION users_history(
+  tid BIGINT,
+  uid BIGINT
+) RETURNS TABLE (id BIGINT, created_at TIMESTAMPTZ, edited_at TIMESTAMPTZ,
+                 edited_by BIGINT, username CITEXT, description TEXT,
+                 avatar VARCHAR(64)) AS $function$
+    BEGIN
+      IF tid != uid THEN  -- TODO: Сделать нормальную проверку
+        RETURN;
+      END IF;
+      RETURN QUERY
+      SELECT us.id, us.created_at, uv.edited_at, uv.edited_by,
+             us.username, uv.description, uv.avatar
+        FROM "user_statics" as us
+             INNER JOIN "user_versions" as uv
+             ON uv.id = us.id
+       WHERE us.id = tid;
+    END;
+  $function$ LANGUAGE plpgsql;
