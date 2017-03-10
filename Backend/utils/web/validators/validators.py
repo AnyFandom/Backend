@@ -7,7 +7,7 @@ from types import FunctionType
 
 from aiohttp.web_reqrep import Request
 
-from .exceptions import ValidationError, InvalidJson
+from ..exceptions import ValidationError, InvalidJson
 
 
 class _ValErr(Exception):
@@ -19,11 +19,14 @@ def _check(statement: bool, text: str):
         raise _ValErr(text)
 
 
-def string(val: Any, mn: int, mx: int) -> str:
+def string(val: Any, mn: int=None, mx: int=None) -> str:
     _check(isinstance(val, str), 'Expected str, got %s' % type(val).__name__)
-    _check(mn <= len(val) <= mx,
-           'Must be longer then %i characters and shorter then %i. got %i' % (
-               mn, mx, len(val)))
+    if mn and mx:
+        _check(
+            mn <= len(val) <= mx,
+            'Must be longer then %i characters and shorter then %i. got %i' % (
+                mn, mx, len(val))
+        )
 
     return val
 
@@ -70,12 +73,6 @@ class JsonValidator:
             raise ValidationError(details=errs)
 
         return resp
-
-
-register_validator = JsonValidator(
-    Field(True, 'username', string, mn=3, mx=64),
-    Field(True, 'password', string, mn=8, mx=256)
-)
 
 
 async def get_body(request: Request, validator: JsonValidator):

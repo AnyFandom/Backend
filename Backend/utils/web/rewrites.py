@@ -27,9 +27,8 @@ class JsonResponse(web.Response):
         kwargs.pop('content-type', None)
         headers[hdrs.CONTENT_TYPE] = 'application/json; charset=utf-8'
 
-        if body is not None:
-            body = Encoder(indent=4)(
-                {'status': status, 'data': body}).encode('utf-8')
+        body = Encoder(indent=4)(
+            {'status': status, 'data': body}).encode('utf-8')
 
         super().__init__(body=body, status=status_code,
                          headers=headers, **kwargs)

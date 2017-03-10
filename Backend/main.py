@@ -24,6 +24,11 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/', RootView)
 
     url('POST', '/auth/register', auth.register)
+    url('POST', '/auth/login', auth.login)
+    url('POST', '/auth/refresh', auth.refresh)
+    url('POST', '/auth/invalidate', auth.invalidate)
+    url('POST', '/auth/change', auth.change)
+    url('POST', '/auth/reset', auth.reset)
 
     url('*', '/users', UserListView)
     url('*', '/users/{first:(u)}/{second:\w+}', UserView)  # URL

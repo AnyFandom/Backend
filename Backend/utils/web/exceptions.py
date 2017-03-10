@@ -33,6 +33,21 @@ class ValidationError(FailException):
                   'transferred or invalid. See "details" for details.'
 
 
+class AuthFail(FailException):
+    status_code = 400
+    description = 'Incorrect username or password.'
+
+
+class InvalidRefresh(FailException):
+    status_code = 400
+    description = 'The specified refresh token is invalid.'
+
+
+class ExpiredRefresh(FailException):
+    status_code = 400
+    description = 'This refresh token has expired.'
+
+
 class ResourceNotFound(FailException):
     status_code = 404
     description = 'The specified resource does not exists.'
@@ -81,3 +96,8 @@ class ErrorException(JsonException):
 class InternalServerError(ErrorException):
     status_code = 500
     description = 'Server got itself in trouble.'
+
+
+class NotYetImplemented(ErrorException):
+    status_code = 501
+    description = 'Soon™.'

@@ -10,7 +10,10 @@ from validate import Validator, ValidateError
 
 from .main import main
 
-spec = """[server]
+spec = """jwt_key = string()
+hmac_key = string()
+
+[server]
 host = string()
 port = integer()
 

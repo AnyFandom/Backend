@@ -2,9 +2,13 @@ CREATE EXTENSION IF NOT EXISTS citext;
 
 CREATE TABLE "auth" (
     PRIMARY KEY (id),
+    UNIQUE (username),
 
-    id            BIGINT       NOT NULL,
-    password_hash VARCHAR(130) NOT NULL
+    id            BIGINT                      NOT NULL,
+    username      CITEXT                      NOT NULL,
+    password_hash VARCHAR(130)                NOT NULL,
+    random        VARCHAR(32)
+                  DEFAULT md5(random()::TEXT) NOT NULL
 );
 
 CREATE TABLE "user_statics" (
@@ -75,8 +79,8 @@ CREATE OR REPLACE FUNCTION users_create(
       INSERT INTO "users" (id, username)
       VALUES (nextval('user_statics_id_seq'), usern);
 
-      INSERT INTO "auth" (id, password_hash)
-      VALUES (currval('user_statics_id_seq'), passh);
+      INSERT INTO "auth" (id, username, password_hash)
+      VALUES (currval('user_statics_id_seq'), usern, passh);
 
       RETURN currval('user_statics_id_seq');
     END;
