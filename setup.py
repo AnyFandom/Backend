@@ -25,12 +25,15 @@ setup(
         'aiohttp==1.3.3',
         'asyncpg==0.9.0',
         'configobj==5.0.6',
-        'passlib==1.7.1,'
+        'passlib==1.7.1',
         'PyJWT==1.4.2',
         'passlib==1.7.1'
     ],
 
     data_files=[(config_path, ['Backend/config.ini'])],
+    package_data={
+        'Backend.sql': ['*.sql']
+    },
     entry_points={'console_scripts': ['backend=Backend.__main__:cli']},
 
     classifiers=[
