@@ -16,7 +16,7 @@ def hash_host(request) -> bytes:
         raise Exception('idk what happend')
 
     digest = hmac.new(
-        request.app['cfg']['hmac_key'].encode(),
+        request.app['cfg']['ip_key'].encode(),
         host.encode(), hashlib.sha1
     ).digest()
 

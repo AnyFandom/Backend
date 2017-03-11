@@ -12,7 +12,7 @@ from .main import main
 
 spec = """access_key = string()
 refresh_key = string()
-hmac_key = string()
+ip_key = string()
 
 [server]
 host = string()

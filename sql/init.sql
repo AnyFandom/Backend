@@ -1,14 +1,14 @@
 CREATE EXTENSION IF NOT EXISTS citext;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE "auth" (
     PRIMARY KEY (id),
     UNIQUE (username),
 
-    id            BIGINT                      NOT NULL,
-    username      CITEXT                      NOT NULL,
-    password_hash VARCHAR(130)                NOT NULL,
-    random        VARCHAR(32)
-                  DEFAULT md5(random()::TEXT) NOT NULL
+    id            BIGINT                         NOT NULL,
+    username      CITEXT                         NOT NULL,
+    password_hash VARCHAR(130)                   NOT NULL,
+    random        UUID DEFAULT gen_random_uuid() NOT NULL
 );
 
 CREATE TABLE "user_statics" (

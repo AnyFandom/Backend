@@ -8,7 +8,7 @@ from ..web.exceptions import UsernameAlreadyTaken, AuthFail
 
 _sqls = {'register': "SELECT * FROM users_create ($1, $2)",
          'login': "SELECT * FROM auth WHERE username = $1::CITEXT",
-         'check_random': "SELECT random = $1 FROM auth WHERE id = $2",
+         'check_random': "SELECT random = $1::UUID FROM auth WHERE id = $2",
          'reset_random': "UPDATE auth SET random = DEFAULT WHERE id = $1",
          'change': "UPDATE auth SET password_hash = $1 WHERE id = $2"}
 
@@ -36,7 +36,7 @@ async def login(conn: asyncpg.connection.Connection,
     if not data or not pbkdf2_sha256.verify(password, data['password_hash']):
         raise AuthFail
 
-    return data['id'], data['random']
+    return data['id'], str(data['random'])
 
 
 async def check_random(conn: asyncpg.connection.Connection,
