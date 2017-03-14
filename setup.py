@@ -14,7 +14,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as file:
     long_description = file.read()
 
 setup(
-    name='anyfandom_backend',
+    name='Backend',
     version='0.1.0.dev',
     long_description=long_description,
 

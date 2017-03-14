@@ -9,6 +9,21 @@ _sqls = {'get': "SELECT * FROM users",
          'patch': "SELECT * FROM users_update($1,$2,$3,$4)",
          'get_history': "SELECT * FROM users_history($1,$2)"}
 
+
+def _format(obj):
+    return dict(
+        type='users',
+        id=obj['id'],
+        attributes=dict(
+            created_at=obj['created_at'],
+            edited_at=obj['edited_at'],
+            edited_by=obj['edited_by'],
+            username=obj['username'],
+            description=obj['description'],
+            avatar=obj['avatar']
+        )
+    )
+
 async def get(conn: asyncpg.connection.Connection,
               *ids: Union[str, int], u: bool=False) -> list:
     if u and ids:
@@ -21,18 +36,7 @@ async def get(conn: asyncpg.connection.Connection,
     else:
         resp = await conn.fetch(_sqls['get'])
 
-    return [dict(
-        type='users',
-        id=x['id'],
-        attributes=dict(
-            created_at=x['created_at'],
-            edited_at=x['edited_at'],
-            edited_by=x['edited_by'],
-            username=x['username'],
-            description=x['description'],
-            avatar=x['avatar']
-        )
-    ) for x in resp]
+    return [_format(x) for x in resp]
 
 
 async def patch(conn: asyncpg.connection.Connection,
@@ -48,15 +52,4 @@ async def get_history(conn: asyncpg.connection.Connection,
                       uid: int, id_: int):
     resp = await conn.fetch(_sqls['get_history'], id_, uid)
 
-    return [dict(
-        type='users',
-        id=x['id'],
-        attributes=dict(
-            created_at=x['created_at'],
-            edited_at=x['edited_at'],
-            edited_by=x['edited_by'],
-            username=x['username'],
-            description=x['description'],
-            avatar=x['avatar']
-        )
-    ) for x in resp]
+    return [_format(x) for x in resp]
