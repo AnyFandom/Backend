@@ -40,7 +40,6 @@ def cli():
 @click.option('-C', '--config_path', type=click.Path())
 @click.option('-P', '--port', type=int)
 def run(config_path, port):
-    """Read config and run backend"""
     if config_path is None:
         path_list = [
             os.path.join(x, 'backend') for x in [
