@@ -38,7 +38,7 @@ class UserView(BaseView):
         return JsonResponse(await _id_u(self.request))
 
     async def patch(self):
-        if self.request.uid is None:
+        if self.request.uid == 0:
             raise Forbidden
         body = await v.get_body(self.request, v.users.patch)
         await db.users.patch(self.request.conn, self.request.uid,
