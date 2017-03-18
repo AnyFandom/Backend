@@ -24,11 +24,12 @@ def _format(obj):
         )
     )
 
+
 async def get(conn: asyncpg.connection.Connection,
               *ids: Union[str, int], u: bool=False) -> list:
     if u and ids:
         resp = await conn.fetch(
-            _sqls['get'] + ' WHERE username = ANY($1::citext[])', ids)
+            _sqls['get'] + ' WHERE username = ANY($1::CITEXT[])', ids)
     elif ids:
         resp = await conn.fetch(
             _sqls['get'] + ' WHERE id = ANY($1::BIGINT[])',
