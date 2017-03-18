@@ -3,5 +3,7 @@
 
 from .root import RootView
 from .users import UserView, UserListView, UserHistoryView
+from .fandoms import FandomListView, FandomView
 
-__all__ = ('auth', 'root', 'users', 'UserListView', 'UserHistoryView')
+__all__ = ('auth', 'root', 'users', 'UserListView', 'UserHistoryView',
+           'FandomListView', 'FandomView')
