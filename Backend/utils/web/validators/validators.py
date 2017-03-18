@@ -37,19 +37,21 @@ def integer(val: Any) -> int:
 
 
 class Field:
-    def __init__(self, required: bool, name: str, func: FunctionType, **args):
+    def __init__(self, required: bool, name: str, func: FunctionType,
+                 default: Any=None, **args):
         self.name = name
 
         self._req = required
         self._func = func
         self._args = args
+        self._def = default
 
     def __call__(self, obj: dict):
         val = obj.get(self.name, None)
 
         _check(not (val is None and self._req), 'Field is required')
         if val is None:
-            return val
+            return self._def
 
         return self._func(val, **self._args)
 

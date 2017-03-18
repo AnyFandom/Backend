@@ -3,7 +3,6 @@
 
 import hmac
 import hashlib
-import base64
 
 
 def hash_host(request) -> bytes:
