@@ -46,7 +46,8 @@ async def get(conn: asyncpg.connection.Connection,
             _sqls['get'] + " WHERE url = ANY($1::CITEXT[])", ids)
     elif ids:
         resp = await conn.fetch(
-            _sqls['get'] + " WHERE id = ANY($1::BIGINT[])", ids)
+            _sqls['get'] + " WHERE id = ANY($1::BIGINT[])",
+            tuple(map(int, ids)))
     else:
         resp = await conn.fetch(_sqls['get'])
 
