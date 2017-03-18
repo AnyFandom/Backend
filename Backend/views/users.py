@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import asyncpg
-
 from ..utils import db
 from ..utils.web import BaseView, JsonResponse, validators as v
-from ..utils.web.exceptions import UserDoesNotExists, Forbidden
+from ..utils.web.exceptions import ObjectDoesNotExists, Forbidden
 
 
 async def _id_u(request) -> dict:
@@ -25,7 +23,7 @@ async def _id_u(request) -> dict:
         else:
             return (await db.users.get(conn, first))[0]
     except (IndexError, ValueError):
-        raise UserDoesNotExists
+        raise ObjectDoesNotExists
 
 
 class UserListView(BaseView):
