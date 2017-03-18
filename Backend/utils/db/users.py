@@ -33,7 +33,7 @@ async def get(conn: asyncpg.connection.Connection,
     elif ids:
         resp = await conn.fetch(
             _sqls['get'] + ' WHERE id = ANY($1::BIGINT[])',
-            list(map(int, ids)))
+            tuple(map(int, ids)))
     else:
         resp = await conn.fetch(_sqls['get'])
 

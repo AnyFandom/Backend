@@ -75,9 +75,9 @@ class ResourceNotFound(FailException):
     description = 'The specified resource does not exists.'
 
 
-class UserDoesNotExists(FailException):
+class ObjectDoesNotExists(FailException):
     status_code = 404
-    description = 'User with specified ID or username does not exists.'
+    description = 'Object with specified ID or username/url does not exists.'
 
 
 class MethodNotAllowed(FailException):

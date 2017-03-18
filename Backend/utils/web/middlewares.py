@@ -54,7 +54,7 @@ async def auth_middleware(app: web.Application, handler):
             except jwt.ExpiredSignatureError:
                 raise ExpiredAccess
         else:
-            request.uid = None
+            request.uid = 0
 
         return await handler(request)
     return middleware_handler
