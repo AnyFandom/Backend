@@ -5,6 +5,8 @@ from typing import Union
 
 import asyncpg
 
+from ..web.exceptions import FandomUrlAlreadyTaken
+
 _sqls = {'add': "SELECT fandoms_create($1, $2, $3, $4, $5)",
          'get': "SELECT * FROM fandoms"}
 
@@ -28,7 +30,13 @@ def _format(obj):
 
 async def add(conn: asyncpg.connection.Connection,
               uid: int, title: str, url: str, descr: str, avatar: str) -> int:
-    return await conn.fetchval(_sqls['add'], uid, url, title, descr, avatar)
+    try:
+        return await conn.fetchval(
+            _sqls['add'], uid, url, title, descr, avatar
+        )
+    except asyncpg.exceptions.UniqueViolationError as exc:
+        if exc.constraint_name == 'fandom_statics_url_key':
+            raise FandomUrlAlreadyTaken
 
 
 async def get(conn: asyncpg.connection.Connection,
