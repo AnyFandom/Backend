@@ -5,7 +5,7 @@ import json
 from typing import Any
 from types import FunctionType
 
-from aiohttp.web_reqrep import Request
+from aiohttp.web_request import Request
 
 from ..exceptions import ValidationError, InvalidJson
 

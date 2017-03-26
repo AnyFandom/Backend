@@ -22,7 +22,7 @@ setup(
     install_requires=[
         'click==6.7',
         'uvloop==0.8.0',
-        'aiohttp==1.3.3',
+        'aiohttp==2.0.0',
         'asyncpg==0.9.0',
         'configobj==5.0.6',
         'passlib==1.7.1',
