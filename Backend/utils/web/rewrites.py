@@ -7,11 +7,15 @@ from datetime import datetime
 from aiohttp import web, hdrs, web_urldispatcher
 from multidict import CIMultiDict
 
+from ..db.models import Obj
+
 
 class Encoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime):
             return o.isoformat()
+        elif isinstance(o, Obj):
+            return dict(o)
         super().default(o)
 
     def __call__(self, *args, **kwargs):

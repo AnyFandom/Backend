@@ -74,6 +74,7 @@ CREATE VIEW users AS (
 CREATE OR REPLACE FUNCTION users_functions() RETURNS TRIGGER AS $function$
     BEGIN
       IF TG_OP = 'INSERT' THEN
+
         INSERT INTO user_statics (id, created_at, username)
         VALUES (NEW.id, now(), NEW.username);
 
@@ -81,7 +82,12 @@ CREATE OR REPLACE FUNCTION users_functions() RETURNS TRIGGER AS $function$
         VALUES (NEW.id, now(), NEW.id);
 
         RETURN NEW;
+
       ELSIF TG_OP = 'UPDATE' THEN
+
+        NEW.description = COALESCE(NEW.description, OLD.description);
+        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+
         IF (NEW.description, NEW.avatar) = (OLD.description, OLD.avatar) THEN
           RETURN NULL;
         ELSE
@@ -91,6 +97,7 @@ CREATE OR REPLACE FUNCTION users_functions() RETURNS TRIGGER AS $function$
 
           RETURN NEW;
         END IF;
+
       ELSIF TG_OP = 'DELETE' THEN
         RETURN NULL;
       END IF;
@@ -117,36 +124,34 @@ CREATE OR REPLACE FUNCTION users_create(
     END;
   $function$ LANGUAGE plpgsql;
 
-
-CREATE OR REPLACE FUNCTION users_update(
-  tid   BIGINT,
-  uid   BIGINT,
-  descr TEXT,
-  avatr VARCHAR(64)
-) RETURNS BOOLEAN AS $function$
+CREATE OR REPLACE FUNCTION users_update_check(
+  tid BIGINT,
+  uid BIGINT
+) RETURNS VOID AS $function$
     BEGIN
-      IF tid != uid THEN  -- TODO: Сделать нормальную проверку
-        RETURN FALSE;
+      IF tid != uid THEN
+        RAISE EXCEPTION 'FORBIDDEN';
       END IF;
-      UPDATE users SET
-        edited_at = DEFAULT, edited_by = uid,
-        description = COALESCE(descr, description),
-        avatar = COALESCE(avatr, avatar)
-      WHERE id = tid;
-      RETURN TRUE;
+    END;
+$function$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION users_history_check(
+  tid BIGINT,
+  uid BIGINT
+) RETURNS VOID AS $function$
+    BEGIN
+      IF tid != uid THEN
+        RAISE EXCEPTION 'FORBIDDEN';
+      END IF;
     END;
   $function$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION users_history(
-  tid BIGINT,
-  uid BIGINT
+  tid BIGINT
 ) RETURNS TABLE (id BIGINT, created_at TIMESTAMPTZ, edited_at TIMESTAMPTZ,
                  edited_by BIGINT, username CITEXT, description TEXT,
                  avatar VARCHAR(64)) AS $function$
     BEGIN
-      IF tid != uid THEN  -- TODO: Сделать нормальную проверку
-        RETURN;
-      END IF;
       RETURN QUERY
       SELECT us.id, us.created_at, uv.edited_at, uv.edited_by,
              us.username, uv.description, uv.avatar
