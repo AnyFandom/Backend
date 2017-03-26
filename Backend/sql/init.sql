@@ -205,6 +205,7 @@ CREATE VIEW fandoms AS (
 CREATE OR REPLACE FUNCTION fandoms_functions() RETURNS TRIGGER AS $function$
     BEGIN
       IF TG_OP = 'INSERT' THEN
+
         INSERT INTO fandom_statics (id, created_at, url)
         VALUES (NEW.id, now(), NEW.url);
 
@@ -213,7 +214,13 @@ CREATE OR REPLACE FUNCTION fandoms_functions() RETURNS TRIGGER AS $function$
         VALUES (NEW.id, now(), NEW.id, NEW.title, NEW.description, NEW.avatar);
 
         RETURN NEW;
+
       ELSIF TG_OP = 'UPDATE' THEN
+
+        NEW.description = COALESCE(NEW.description, OLD.description);
+        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+        NEW.title = COALESCE(NEW.title, OLD.title);
+
         IF (NEW.description, NEW.avatar, NEW.title) =
            (OLD.description, OLD.avatar, OLD.title) THEN
           RETURN NULL;
@@ -225,6 +232,7 @@ CREATE OR REPLACE FUNCTION fandoms_functions() RETURNS TRIGGER AS $function$
 
           RETURN NEW;
         END IF;
+
       ELSIF TG_OP = 'DELETE' THEN
         RETURN NULL;
       END IF;
@@ -236,6 +244,15 @@ INSTEAD OF INSERT OR UPDATE OR DELETE
 ON fandoms FOR EACH ROW
 EXECUTE PROCEDURE fandoms_functions();
 
+CREATE OR REPLACE FUNCTION fandoms_create_check(
+  uid BIGINT
+) RETURNS VOID AS $function$
+    BEGIN
+      IF uid = 0 THEN
+        RAISE EXCEPTION 'FORBIDDEN';
+      END IF;
+    END;
+  $function$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION fandoms_create(
   uid   BIGINT,
@@ -245,10 +262,6 @@ CREATE OR REPLACE FUNCTION fandoms_create(
   avatr VARCHAR(64)
 ) RETURNS BIGINT AS $function$
     BEGIN
-      IF FALSE THEN  -- TODO: Сделать нормальную проверку
-        RETURN FALSE;
-      END IF;
-
       INSERT INTO fandoms (id, url, title, description, avatar)
       VALUES (nextval('fandom_statics_id_seq'), u, titl, descr, avatr);
 
@@ -259,43 +272,40 @@ CREATE OR REPLACE FUNCTION fandoms_create(
     END;
   $function$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION fandoms_update(
-  tid   BIGINT,
-  uid   BIGINT,
-  titl  VARCHAR(120),
-  descr TEXT,
-  avatr VARCHAR(64)
-) RETURNS BOOLEAN AS $function$
+CREATE OR REPLACE FUNCTION fandoms_update_check(
+  tid BIGINT,
+  uid BIGINT
+) RETURNS VOID AS $function$
     BEGIN
       IF NOT EXISTS (SELECT 1 FROM relationships
                       WHERE target_type = 'fandom'
                         AND target_id = tid
                         AND user_id = uid) THEN  -- TODO: Сделать нормальную проверку
-        RETURN FALSE;
+        RAISE EXCEPTION 'FORBIDDEN';
       END IF;
-      UPDATE fandoms SET
-        edited_at = DEFAULT, edited_by = uid,
-        description = COALESCE(descr, description),
-        avatar = COALESCE(avatr, avatar),
-        title = COALESCE(titl, title)
-      WHERE id = tid;
-      RETURN TRUE;
+    END;
+  $function$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION fandoms_history_check(
+  tid BIGINT,
+  uid BIGINT
+) RETURNS VOID AS $function$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM relationships
+                      WHERE target_type = 'fandom'
+                        AND target_id = tid
+                        AND user_id = uid) THEN  -- TODO: Сделать нормальную проверку
+        RAISE EXCEPTION 'FORBIDDEN';
+      END IF;
     END;
   $function$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION fandoms_history(
-  tid BIGINT,
-  uid BIGINT
+  tid BIGINT
 ) RETURNS TABLE (id BIGINT, created_at TIMESTAMPTZ, edited_at TIMESTAMPTZ,
                  edited_by BIGINT, title VARCHAR, url CITEXT, description TEXT,
                  avatar VARCHAR(64), owner BIGINT) AS $function$
     BEGIN
-      IF NOT EXISTS (SELECT 1 FROM relationships
-                      WHERE target_type = 'fandom'
-                        AND target_id = tid
-                        AND user_id = uid) THEN  -- TODO: Сделать нормальную проверку
-        RETURN;
-      END IF;
       RETURN QUERY
       SELECT fs.id, fs.created_at, fv.edited_at, fv.edited_by,
              fv.title, fs.url, fv.description, fv.avatar, rl.user_id as owner
@@ -305,6 +315,7 @@ CREATE OR REPLACE FUNCTION fandoms_history(
 
              INNER JOIN relationships as rl
              ON rl.target_id = fs.id
-                AND rl.target_type = 'fandom';
+                AND rl.target_type = 'fandom'
+      WHERE fs.id = tid;
     END;
   $function$ LANGUAGE plpgsql;

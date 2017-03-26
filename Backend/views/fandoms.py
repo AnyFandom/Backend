@@ -2,37 +2,36 @@
 # -*- coding: utf-8 -*-
 
 from ..utils import db
+from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
 from ..utils.web.exceptions import ObjectDoesNotExists, Forbidden, NotYetImplemented
 
 
-async def _id_u(request) -> dict:
+async def _id_u(request) -> m.Fandom:
     conn = request.conn
     first = request.match_info['first']
     second = request.match_info.get('second', None)
+    uid = request.uid
 
     try:
         if first == 'u' and second is not None:
-            return (await db.fandoms.get(conn, second, u=True))[0]
+            return (await m.Fandom.select(conn, uid, second, u=True))[0]
         else:
-            return (await db.fandoms.get(conn, first))[0]
+            return (await m.Fandom.select(conn, uid, first))[0]
     except (IndexError, ValueError):
         raise ObjectDoesNotExists
 
 
 class FandomListView(BaseView):
     async def get(self):
-        return JsonResponse(await db.fandoms.get(self.request.conn))
+        return JsonResponse(
+            await m.Fandom.select(self.request.conn, self.request.uid))
 
     async def post(self):
-        if self.request.uid == 0:
-            raise Forbidden
-
         body = await v.get_body(self.request, v.fandoms.add)
 
-        new_id = await db.fandoms.add(self.request.conn, self.request.uid,
-                                      body['title'], body['url'],
-                                      body['description'], body['avatar'])
+        new_id = await m.Fandom.insert(
+            self.request.conn, self.request.uid, body)
 
         return JsonResponse(
             {'Location': '/fandoms/%i' % new_id}, status_code=201,
