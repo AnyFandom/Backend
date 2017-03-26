@@ -125,7 +125,8 @@ class Fandom(Obj):
                "title=$3, description=$4, avatar=$5 WHERE id=$2",
 
         check=dict(
-            insert="SELECT fandoms_create_check($1)"
+            insert="SELECT fandoms_create_check($1)",
+            update="SELECT fandoms_update_check($1, $2)"
         )
     )
 
@@ -170,5 +171,15 @@ class Fandom(Obj):
 
         return new_id
 
-    async def update(self, conn, user_id, fields):
-        pass
+    async def update(self, conn: asyncpg.connection.Connection,
+                     user_id: int, fields: dict):
+        # TODO: Убрать conn и user_id
+
+        # Проверка
+        await conn.execute(
+            self._sqls['check']['update'], self._data['id'], user_id)
+
+        await conn.execute(
+            self._sqls['update'], user_id, self._data['id'],
+            fields.get('title'), fields.get('description'),
+            fields.get('avatar'))

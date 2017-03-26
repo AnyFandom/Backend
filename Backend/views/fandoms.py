@@ -44,4 +44,8 @@ class FandomView(BaseView):
         return JsonResponse(await _id_u(self.request))
 
     async def patch(self):
-        raise NotYetImplemented
+        body = await v.get_body(self.request, v.fandoms.patch)
+        await (await _id_u(self.request)).update(
+            self.request.conn, self.request.uid, body)
+
+        return JsonResponse()
