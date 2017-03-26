@@ -95,6 +95,11 @@ class UsernameAlreadyTaken(FailException):
     description = 'This username is already taken.'
 
 
+class FandomUrlAlreadyTaken(FailException):
+    status_code = 409
+    description = 'Fandom with specified url already exists.'
+
+
 class ExpectationFailed(FailException):
     status_code = 417
     description = 'Unknown Expect: %s'
