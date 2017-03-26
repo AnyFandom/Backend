@@ -123,10 +123,12 @@ class Fandom(Obj):
         select="SELECT * FROM fandoms %s ORDER BY id",
         update="UPDATE fandoms SET edited_by=$1,"
                "title=$3, description=$4, avatar=$5 WHERE id=$2",
+        history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC",
 
         check=dict(
             insert="SELECT fandoms_create_check($1)",
-            update="SELECT fandoms_update_check($1, $2)"
+            update="SELECT fandoms_update_check($1, $2)",
+            history="SELECT fandoms_history_check($1, $2)"
         )
     )
 
@@ -183,3 +185,15 @@ class Fandom(Obj):
             self._sqls['update'], user_id, self._data['id'],
             fields.get('title'), fields.get('description'),
             fields.get('avatar'))
+
+    async def history(self, conn: asyncpg.connection.Connection,
+                      user_id: int) -> Tuple['Fandom']:
+        # TODO: Убрать conn и user_id
+
+        # Проверка
+        await conn.execute(
+            self._sqls['check']['history'], self._data['id'], user_id)
+
+        resp = await conn.fetch(self._sqls['history'], self._data['id'])
+
+        return tuple(map(self.__class__, resp))

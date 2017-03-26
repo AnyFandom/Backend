@@ -49,3 +49,12 @@ class FandomView(BaseView):
             self.request.conn, self.request.uid, body)
 
         return JsonResponse()
+
+
+class FandomHistoryView(BaseView):
+    async def get(self):
+        resp = await (await _id_u(self.request)).history(
+            self.request.conn, self.request.uid)
+
+        return JsonResponse(resp)
+

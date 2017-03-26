@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from .root import RootView
-from .users import UserView, UserListView, UserHistoryView
-from .fandoms import FandomListView, FandomView
+from .users import UserListView, UserView, UserHistoryView
+from .fandoms import FandomListView, FandomView, FandomHistoryView
 
-__all__ = ('auth', 'root', 'users', 'UserListView', 'UserHistoryView',
-           'FandomListView', 'FandomView')
+__all__ = ('auth', 'root', 'users',
+           'UserListView', 'UserView' 'UserHistoryView',
+           'FandomListView', 'FandomView', 'FandomHistoryView')
