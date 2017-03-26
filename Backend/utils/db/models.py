@@ -9,8 +9,10 @@ import asyncpg
 
 
 class Obj(Mapping, metaclass=ABCMeta):
-    def __init__(self, data):
+    def __init__(self, data, conn=None, user_id=None):
         self._data = self._map(dict(data))
+        self._conn = conn
+        self._uid = user_id
 
     # Mapping
 
@@ -44,7 +46,7 @@ class Obj(Mapping, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def update(self, conn, user_id, fields):
+    async def update(self, fields):
         pass
 
 
@@ -68,7 +70,7 @@ class User(Obj):
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection,
                      user_id: int, *target_ids: Union[int, str],
-                     u: bool=False) -> Tuple['User']:
+                     u: bool=False) -> Tuple['User', ...]:
 
         # На вход поданы имена
         if u and target_ids:
@@ -86,33 +88,28 @@ class User(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '')
 
-        return tuple(map(cls, resp))
+        return tuple(cls(x, conn, user_id) for x in resp)
 
     @classmethod
     async def insert(cls, conn, user_id, fields):
         pass
 
-    async def update(self, conn: asyncpg.connection.Connection,
-                     user_id: int, fields: dict):
-        # TODO: Убрать conn и user_id
+    async def update(self, fields: dict):
 
         # Проверка
-        await conn.execute(
-            self._sqls['check']['update'], self._data['id'], user_id)
+        await self._conn.execute(
+            self._sqls['check']['update'], self._data['id'], self._uid)
 
-        await conn.execute(
-            self._sqls['update'], user_id, self._data['id'],
+        await self._conn.execute(
+            self._sqls['update'], self._uid, self._data['id'],
             fields.get('description'), fields.get('avatar'))
 
-    async def history(self, conn: asyncpg.connection.Connection,
-                      user_id: int) -> Tuple['User']:
-        # TODO: Убрать conn и user_id
-
+    async def history(self) -> Tuple['User']:
         # Проверка
-        await conn.execute(
-            self._sqls['check']['history'], self._data['id'], user_id)
+        await self._conn.execute(
+            self._sqls['check']['history'], self._data['id'], self._uid)
 
-        resp = await conn.fetch(self._sqls['history'], self._data['id'])
+        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
 
         return tuple(map(self.__class__, resp))
 
@@ -139,7 +136,7 @@ class Fandom(Obj):
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection,
                      user_id: int, *target_ids: Union[int, str],
-                     u: bool=False) -> Tuple['Fandom']:
+                     u: bool=False) -> Tuple['Fandom', ...]:
 
         # На вход поданы url
         if u and target_ids:
@@ -157,7 +154,7 @@ class Fandom(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '')
 
-        return tuple(map(cls, resp))
+        return tuple(cls(x, conn, user_id) for x in resp)
 
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection,
@@ -173,27 +170,23 @@ class Fandom(Obj):
 
         return new_id
 
-    async def update(self, conn: asyncpg.connection.Connection,
-                     user_id: int, fields: dict):
-        # TODO: Убрать conn и user_id
+    async def update(self, fields: dict):
 
         # Проверка
-        await conn.execute(
-            self._sqls['check']['update'], self._data['id'], user_id)
+        await self._conn.execute(
+            self._sqls['check']['update'], self._data['id'], self._uid)
 
-        await conn.execute(
-            self._sqls['update'], user_id, self._data['id'],
+        await self._conn.execute(
+            self._sqls['update'], self._uid, self._data['id'],
             fields.get('title'), fields.get('description'),
             fields.get('avatar'))
 
-    async def history(self, conn: asyncpg.connection.Connection,
-                      user_id: int) -> Tuple['Fandom']:
-        # TODO: Убрать conn и user_id
+    async def history(self) -> Tuple['Fandom']:
 
         # Проверка
-        await conn.execute(
-            self._sqls['check']['history'], self._data['id'], user_id)
+        await self._conn.execute(
+            self._sqls['check']['history'], self._data['id'], self._uid)
 
-        resp = await conn.fetch(self._sqls['history'], self._data['id'])
+        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
 
         return tuple(map(self.__class__, resp))

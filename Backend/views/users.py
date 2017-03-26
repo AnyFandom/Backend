@@ -38,15 +38,13 @@ class UserView(BaseView):
 
     async def patch(self):
         body = await v.get_body(self.request, v.users.patch)
-        await (await _id_u(self.request)).update(
-            self.request.conn, self.request.uid, body)
+        await (await _id_u(self.request)).update(body)
 
         return JsonResponse()
 
 
 class UserHistoryView(BaseView):
     async def get(self):
-        resp = await (await _id_u(self.request)).history(
-            self.request.conn, self.request.uid)
+        resp = await (await _id_u(self.request)).history()
 
         return JsonResponse(resp)
