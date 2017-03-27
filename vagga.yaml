@@ -2,7 +2,6 @@ _templates:
     volumes: &volumes
       /config: !BindRO /work/config
 
-
 containers:
   _base:
     setup:
@@ -65,14 +64,21 @@ commands:
   postgres: &postgres !Command
     description: Запустить базу данных
     container: postgres
-    user-id: 70
-    group-id: 70
     run: |
-      trap "pg_ctl -w stop; trap - INT; kill -INT $$" INT
-      pg_ctl -w -o '-Fp $PG_PORT -k /tmp' start
+      trap "su postgres -c \"pg_ctl -w stop\"; trap - INT; kill -INT $$" INT
+      su postgres -c "pg_ctl -w -o '-Fp $PG_PORT -k /tmp' start"
+      rm -f /work/.dbinit.lock
       while sleep 86400; do :; done
 
-  backend: &backend !Command
-    description: Запустить бэкенд
+  _backend_inst: &_backend !Command
     container: backend
-    run: python3 manage.py run
+    run: |
+      touch /work/.dbinit.lock
+      while [ -f /work/.dbinit.lock ]; do sleep 0.2; done
+      python3 manage.py run
+
+  run: !Supervise
+    description: Запустить все
+    children:
+      postgres: *postgres
+      backend: *_backend

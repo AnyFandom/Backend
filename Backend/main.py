@@ -48,7 +48,12 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{first:\w+}/history', FandomHistoryView)
 
     app['cfg'] = config
-    app['db'] = await DB.init(loop=loop, **config['db'])
+    app['db'] = await DB.init(
+        loop=loop, host=config['db_host'], port=int(config['db_port']),
+        database=config['db_database'], user=config['db_user'],
+        password=config['db_password'], max_size=int(config['pool_max']),
+        min_size=int(config['pool_min'])
+    )
 
     return app
 
@@ -61,10 +66,10 @@ def main(config: dict):
 
     handler = app.make_handler()
     server = loop.run_until_complete(loop.create_server(
-        handler, config['server']['host'], config['server']['port']))
+        handler, config['server_host'], int(config['server_port'])))
 
     print('Server running at http://{}:{}/'.format(
-        config['server']['host'], config['server']['port']))
+        config['server_host'], config['server_port']))
 
     try:
         loop.run_forever()
