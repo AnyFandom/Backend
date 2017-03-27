@@ -1,0 +1,78 @@
+_templates:
+    volumes: &volumes
+      /config: !BindRO /work/config
+
+
+containers:
+  _base:
+    setup:
+      - !Alpine v3.5
+      - !AlpineRepo
+        url: http://mirror.yandex.ru/mirrors/alpine/
+        branch: edge
+        repo: main
+      - !EnsureDir /config
+
+  backend:
+    setup:
+      - !Container _base
+      - !PipConfig
+        dependencies: true
+      - !Py3Requirements requirements.txt
+    environ-file: /config/backend.env
+    volumes: *volumes
+
+  postgres:
+    setup:
+      - !Container _base
+      - !EnsureDir /data
+      - !Install [postgresql, postgresql-contrib]
+    environ-file: /config/postgres.env
+    volumes:
+      <<: *volumes
+      /data: !Persistent
+        name: postgres
+        owner-uid: 70
+        owner-gid: 70
+        init_command: _init_db
+
+  nginx:
+    setup:
+      - !Container _base
+      - !Install [nginx]
+    volumes: *volumes
+
+
+commands:
+  _init_db: !Command
+    description: Инициализировать базу данных
+    container: postgres
+    user-id: 70
+    group-id: 70
+    run: |
+      set -ex
+
+      pg_ctl init
+      pg_ctl start -wo "-F --port=$PG_PORT -k /tmp"
+
+      psql -h 127.0.0.1 -p $PG_PORT -c "CREATE USER $PG_USER WITH PASSWORD '$PG_PASS';"
+      createdb -h 127.0.0.1 -p $PG_PORT -O $PG_USER $PG_DB
+
+      psql -h 127.0.0.1 -p $PG_PORT -d $PG_DB -c "CREATE EXTENSION CITEXT; CREATE EXTENSION PGCRYPTO;"
+
+      pg_ctl stop
+
+  postgres: &postgres !Command
+    description: Запустить базу данных
+    container: postgres
+    user-id: 70
+    group-id: 70
+    run: |
+      trap "pg_ctl -w stop; trap - INT; kill -INT $$" INT
+      pg_ctl -w -o '-Fp $PG_PORT -k /tmp' start
+      while sleep 86400; do :; done
+
+  backend: &backend !Command
+    description: Запустить бэкенд
+    container: backend
+    run: python3 manage.py run
