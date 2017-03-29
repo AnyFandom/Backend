@@ -68,15 +68,14 @@ def main(config: dict):
     server = loop.run_until_complete(loop.create_server(
         handler, config['server_host'], int(config['server_port'])))
 
-    print('Server running at http://{}:{}/'.format(
-        config['server_host'], config['server_port']))
+    print('Server running at port {}'.format(config['server_port']))
 
     try:
         loop.run_forever()
     except KeyboardInterrupt:
         pass
     finally:
-        print('Shutting down')
+        print('Shutting down server at port {}'.format(config['server_port']))
         server.close()
         loop.run_until_complete(server.wait_closed())
         loop.run_until_complete(app['db'].close())

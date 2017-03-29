@@ -1,6 +1,8 @@
 _templates:
-    volumes: &volumes
-      /config: !BindRO /work/config
+  volumes: &volumes
+    /config: !BindRO /work/config
+    /locks: !BindRW /work/locks
+
 
 containers:
   _base:
@@ -11,6 +13,7 @@ containers:
         branch: edge
         repo: main
       - !EnsureDir /config
+      - !EnsureDir /locks
 
   backend:
     setup:
@@ -39,8 +42,12 @@ containers:
     setup:
       - !Container _base
       - !Install [nginx]
-    volumes: *volumes
-
+    volumes:
+      <<: *volumes
+      /var/lib/nginx: !Tmpfs
+        subdirs:
+          logs:
+          tmp:
 
 commands:
   _init_db: !Command
@@ -61,24 +68,36 @@ commands:
 
       pg_ctl stop
 
-  postgres: &postgres !Command
-    description: Запустить базу данных
-    container: postgres
-    run: |
-      trap "su postgres -c \"pg_ctl -w stop\"; trap - INT; kill -INT $$" INT
-      su postgres -c "pg_ctl -w -o '-Fp $PG_PORT -k /tmp' start"
-      rm -f /work/.dbinit.lock
-      while sleep 86400; do :; done
-
   _backend_inst: &_backend !Command
     container: backend
     run: |
-      touch /work/.dbinit.lock
-      while [ -f /work/.dbinit.lock ]; do sleep 0.2; done
+      chmod o+w /locks
+      touch /locks/.dbinit.lock
+      while [ -f /locks/.dbinit.lock ]; do sleep 0.2; done
       python3 manage.py run
+
+  postgres: &postgres !Command
+    description: Запустить базу данных
+    user-id: 70
+    group-id: 70
+    container: postgres
+    run: |
+      trap "pg_ctl -w stop; trap - INT; kill -INT $$" INT
+      pg_ctl -wo '-Fp $PG_PORT -k /tmp' start
+      rm -f /locks/.dbinit.lock
+      while sleep 86400; do :; done
+
+  nginx: &nginx !Command
+    description: Запустить nginx
+    container: nginx
+    run: nginx -c /config/nginx.conf
 
   run: !Supervise
     description: Запустить все
     children:
+      i1: !Command
+        <<: *_backend
+        environ: { server_port: 8081 }
+
+      nginx: *nginx
       postgres: *postgres
-      backend: *_backend
