@@ -9,7 +9,10 @@ register = JsonValidator(
     Field(True, 'password', string, mn=8, mx=256)
 )
 
-login = register
+login = JsonValidator(
+    Field(True, 'username', string),
+    Field(True, 'password', string)
+)
 
 refresh = JsonValidator(
     Field(True, 'refresh_token', string)
