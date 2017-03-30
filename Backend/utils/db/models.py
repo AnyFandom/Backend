@@ -104,7 +104,7 @@ class User(Obj):
             self._sqls['update'], self._uid, self._data['id'],
             fields.get('description'), fields.get('avatar'))
 
-    async def history(self) -> Tuple['User']:
+    async def history(self) -> Tuple['User', ...]:
         # Проверка
         await self._conn.execute(
             self._sqls['check']['history'], self._data['id'], self._uid)

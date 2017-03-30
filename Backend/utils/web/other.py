@@ -8,7 +8,7 @@ import hashlib
 def hash_host(request) -> bytes:
     """Выдирает hostname из request и хэширует его"""
     # Когда будем пихать бэкенд под Nginx, надо поменять
-    peername = request.transport.get_extra_info('peername')
+    peername = request.headers['X-Real-IP']
     if peername is not None:
         host = peername[0]
     else:  # На всякий случай

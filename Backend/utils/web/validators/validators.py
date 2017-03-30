@@ -24,7 +24,7 @@ def string(val: Any, mn: int=None, mx: int=None) -> str:
     if mn and mx:
         _check(
             mn <= len(val) <= mx,
-            'Must be longer then %i characters and shorter then %i. got %i' % (
+            'Must be at least %i characters long and maximum of %i. got %i' % (
                 mn, mx, len(val))
         )
 
