@@ -15,7 +15,7 @@ def cli():
 
 @cli.command()
 def run():
-    config_keys = ['access_key', 'refresh_key', 'ip_key', 'server_host',
+    config_keys = ['access_key', 'refresh_key', 'server_host',
                    'server_port', 'db_host', 'db_port', 'db_database',
                    'db_user', 'db_password', 'pool_min', 'pool_max']
 

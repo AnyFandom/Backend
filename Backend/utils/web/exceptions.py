@@ -38,24 +38,14 @@ class AuthFail(FailException):
     description = 'Incorrect username or password.'
 
 
-class InvalidRefresh(FailException):
+class InvalidToken(FailException):
     status_code = 400
-    description = 'The specified refresh token is invalid.'
+    description = 'The specified token is invalid.'
 
 
-class ExpiredRefresh(FailException):
+class ExpiredToken(FailException):
     status_code = 400
-    description = 'This refresh token has expired.'
-
-
-class InvalidAccess(FailException):
-    status_code = 400
-    description = 'The specified access token is invalid.'
-
-
-class ExpiredAccess(FailException):
-    status_code = 400
-    description = 'This access token has expired.'
+    description = 'The specified token is expired.'
 
 
 class InvalidHeaderValue(FailException):

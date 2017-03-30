@@ -47,6 +47,9 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{first:\w+}', FandomView)
     url('*', '/fandoms/{first:\w+}/history', FandomHistoryView)
 
+    config['access_key'] = config['access_key'].encode('utf-8')
+    config['refresh_key'] = config['refresh_key'].encode('utf-8')
+
     app['cfg'] = config
     app['db'] = await DB.init(
         loop=loop, host=config['db_host'], port=int(config['db_port']),

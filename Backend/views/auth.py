@@ -3,15 +3,13 @@
 
 import time
 import base64
-
-import jwt
+import socket
 
 from ..utils import db
 from ..utils.web import JsonResponse
 from ..utils.web import validators as v
-from ..utils.web.exceptions import (InvalidRefresh, ExpiredRefresh,
-                                    NotYetImplemented)
-from ..utils.web.other import hash_host
+from ..utils.web.tkn import encode_timed, decode_timed
+from ..utils.web.exceptions import NotYetImplemented, InvalidToken
 
 
 async def register(request):
@@ -30,47 +28,41 @@ async def register(request):
 async def login(request):
     """Получение токенов по логину/паролю"""
     body = await v.get_body(request, v.auth.login)
-    i, r = await db.auth.login(
+    id_, rand = await db.auth.login(
         request.conn, body['username'], body['password']
     )
 
-    t = int(time.time())
-
-    return JsonResponse({
-        'refresh_token': jwt.encode({
-            'id': i, 'random': r, 'exp': t + 2419200  # 28 дней
-        }, key=request.app['cfg']['refresh_key']).decode(),
-        'access_token': jwt.encode({
-            'id': i, 'exp': t + 600,  # 10 минут
-            'for': base64.b64encode(hash_host(request)).decode('utf-8')
-        }, key=request.app['cfg']['access_key']).decode()
-    })
+    return JsonResponse(dict(
+        access_token=encode_timed(
+            'I4s', id_, socket.inet_aton(request.headers['X-Real-IP']),
+            key=request.app['cfg']['access_key'], life=600
+        ).decode('utf-8'),
+        refresh_token=encode_timed(
+            'I16s', id_, rand.bytes, life=2419200,
+            key=request.app['cfg']['refresh_key']
+        ).decode('utf-8')
+    ))
 
 
 async def refresh(request):
     """Получение нового access токена по refresh токену"""
     body = await v.get_body(request, v.auth.refresh)
 
-    try:
-        decoded = jwt.decode(
-            body['refresh_token'], key=request.app['cfg']['refresh_key']
-        )
-    except jwt.DecodeError:
-        raise InvalidRefresh
-    except jwt.ExpiredSignatureError:
-        raise ExpiredRefresh
+    decoded = decode_timed(
+        body['refresh_token'].encode('utf-8'),
+        key=request.app['cfg']['refresh_key']
+    )
 
-    if await db.auth.check_random(
-            request.conn, decoded['id'], decoded['random']
-    ):
-        return JsonResponse({
-            'access_token': jwt.encode({
-                'id': decoded['id'], 'exp': int(time.time()) + 600,
-                'for': base64.b64encode(hash_host(request)).decode('utf-8')
-            }, key=request.app['cfg']['access_key']).decode()
-        })
+    if await db.auth.check_random(request.conn, decoded[0], decoded[1]):
+        return JsonResponse(dict(
+            access_token=encode_timed(
+                'I4s', decoded[0],
+                socket.inet_aton(request.headers['X-Real-IP']),
+                key=request.app['cfg']['access_key'], life=600
+            ).decode('utf-8')
+        ))
     else:
-        raise InvalidRefresh
+        raise InvalidToken
 
 
 async def invalidate(request):

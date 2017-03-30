@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import uuid
+
 import asyncpg
 from passlib.hash import pbkdf2_sha256
 
@@ -36,12 +38,13 @@ async def login(conn: asyncpg.connection.Connection,
     if not data or not pbkdf2_sha256.verify(password, data['password_hash']):
         raise AuthFail
 
-    return data['id'], str(data['random'])
+    return data['id'], data['random']
 
 
 async def check_random(conn: asyncpg.connection.Connection,
                        id_: int, random: str) -> bool:
-    return await conn.fetchval(_sqls['check_random'], random, id_)
+    return await conn.fetchval(
+        _sqls['check_random'], uuid.UUID(bytes=random), id_)
 
 
 async def invalidate(conn: asyncpg.connection.Connection,
