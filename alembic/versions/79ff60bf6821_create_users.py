@@ -118,15 +118,15 @@ def upgrade():
         $$ LANGUAGE plpgsql;
         
         CREATE FUNCTION users_create (
-            uname      VARCHAR(120),
-            phash VARCHAR(130)
+            username      VARCHAR(120),
+            password_hash VARCHAR(130)
         ) RETURNS BIGINT AS $$
             BEGIN
                 INSERT INTO users (id, created_at, username)
-                VALUES (nextval('us_id_seq'), now(), uname);
+                VALUES (nextval('us_id_seq'), now(), username);
                 
                 INSERT INTO auth (id, username, password_hash)
-                VALUES (currval('us_id_seq'), uname, phash);
+                VALUES (currval('us_id_seq'), username, password_hash);
                 
                 RETURN currval('us_id_seq');
             END;
