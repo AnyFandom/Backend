@@ -7,10 +7,7 @@ AnyFandom Python Backend
 
 Установка:
 ==========
-    * Создать virtualenv и склонировать туда этот репозиторий
-    * Установить Postgresql и сконфигурировать его
-    * Выполнить `Backend/sql/init.sql` в новосозданной БД
-    * Скопировать/залинковать `Backend/config.ini` в `~/.config/backend/config.ini`
-    * Активировать venv
-    * Установить этот пакет с помощью `pip install -e .`
-    * Запуск командой `backend run`
+    * Склонировать этот репозиторий куда-нибудь
+    * Установить `vagga <https://github.com/tailhook/vagga>`_
+    * Выполнить `vagga run` в папке
+    * Радоваться
