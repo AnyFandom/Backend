@@ -18,6 +18,7 @@ containers:
   backend:
     setup:
       - !Container _base
+      - !Install [postgresql-dev, gcc, python3-dev, musl-dev]
       - !PipConfig
         dependencies: true
       - !Py3Requirements requirements.txt
@@ -78,8 +79,8 @@ commands:
     container: backend
     run: |
       chmod o+w /locks
-      touch /locks/.dbinit.lock
-      while [ -f /locks/.dbinit.lock ]; do sleep 0.2; done
+      touch /locks/.dbmigrate.lock
+      while [ -f /locks/.dbmigrate.lock ]; do sleep 0.2; done
       python3 manage.py run
 
   postgres: &postgres !Command
@@ -90,7 +91,7 @@ commands:
     run: |
       trap "pg_ctl -w stop; trap - INT; kill -INT $$" INT
       pg_ctl -wo '-Fp $PG_PORT -k /tmp' start
-      rm -f /locks/.dbinit.lock
+      rm -f /locks/.dbstart.lock
       while sleep 86400; do :; done
 
   nginx: &nginx !Command
@@ -101,6 +102,15 @@ commands:
   run: !Supervise
     description: Запустить все
     children:
+      migrate: !Command
+        container: backend
+        run: |
+          touch /locks/.dbstart.lock
+          while [ -f /locks/.dbstart.lock ]; do sleep 0.2; done
+          alembic upgrade head
+          rm -f /locks/.dbmigrate.lock
+          while sleep 86400; do :; done
+
       i1: !Command
         <<: *_backend
         environ: { server_port: 8081 }
