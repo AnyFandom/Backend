@@ -4,7 +4,7 @@
 from ..utils import db
 from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
-from ..utils.web.exceptions import ObjectDoesNotExists, Forbidden, NotYetImplemented
+from ..utils.web.exceptions import ObjectNotFound, Forbidden, NotYetImplemented
 
 
 async def _id_u(request) -> m.Fandom:
@@ -19,7 +19,7 @@ async def _id_u(request) -> m.Fandom:
         else:
             return (await m.Fandom.select(conn, uid, first))[0]
     except (IndexError, ValueError):
-        raise ObjectDoesNotExists
+        raise ObjectNotFound
 
 
 class FandomListView(BaseView):

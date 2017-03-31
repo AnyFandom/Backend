@@ -3,7 +3,7 @@
 
 from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
-from ..utils.web.exceptions import ObjectDoesNotExists, Forbidden
+from ..utils.web.exceptions import ObjectNotFound, Forbidden
 
 
 async def _id_u(request) -> m.User:
@@ -23,7 +23,7 @@ async def _id_u(request) -> m.User:
         else:
             return (await m.User.select(conn, uid, first))[0]
     except (IndexError, ValueError):
-        raise ObjectDoesNotExists
+        raise ObjectNotFound
 
 
 class UserListView(BaseView):
