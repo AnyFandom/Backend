@@ -61,7 +61,7 @@ def upgrade():
         
         CREATE VIEW fandoms AS (
             SELECT fs.id, fs.created_at, fv.edited_at, fv.edited_by,
-                   fv.title, fs.url, fv.description, fv.avatar, rl.user_id AS owner
+                   fv.title, fs.url, fv.description, fv.avatar
               FROM fandom_statics as fs
                    INNER JOIN fandom_versions AS fv
                    ON fv.id = fs.id
@@ -69,11 +69,6 @@ def upgrade():
                           (SELECT max(fv2.edited_at)
                              FROM fandom_versions AS fv2
                             WHERE fv2.id = fs.id)
-                   
-                   INNER JOIN relationships AS rl
-                   ON rl.target_id = fs.id
-                      AND rl.target_type = 'fandom'
-                      AND rl.role = 'owner'
         );
         
         CREATE FUNCTION fandoms_functions () RETURNS TRIGGER AS $$
@@ -131,7 +126,7 @@ def upgrade():
                                 WHERE target_type = 'fandom'
                                   AND target_id = f_target_id
                                   AND user_id = f_user_id
-                                  AND role = 'owner') THEN
+                                  AND role = 'admin') THEN
                     RAISE EXCEPTION 'FORBIDDEN';
                 END IF;
             END;
@@ -146,7 +141,7 @@ def upgrade():
                                 WHERE target_type = 'fandom'
                                   AND target_id = f_target_id
                                   AND user_id = f_user_id
-                                  AND role = 'owner') THEN
+                                  AND role = 'admin') THEN
                     RAISE EXCEPTION 'FORBIDDEN';
                 END IF;
             END;
@@ -164,7 +159,7 @@ def upgrade():
                 VALUES (nextval('fs_id_seq'), now(), url, title, description, avatar);
                 
                 INSERT INTO relationships (user_id, target_id, target_type, role, set_by)
-                VALUES (user_id, currval('fs_id_seq'), 'fandom', 'owner', user_id);
+                VALUES (user_id, currval('fs_id_seq'), 'fandom', 'admin', user_id);
                 
                 RETURN currval('fs_id_seq');
             END;
@@ -174,15 +169,10 @@ def upgrade():
             target_id BIGINT
         ) RETURNS SETOF fandoms AS $$
             SELECT fs.id, fs.created_at, fv.edited_at, fv.edited_by,
-                   fv.title, fs.url, fv.description, fv.avatar, rl.user_id AS owner
+                   fv.title, fs.url, fv.description, fv.avatar
               FROM fandom_statics as fs
                    INNER JOIN fandom_versions AS fv
                    ON fv.id = fs.id
-              
-                   INNER JOIN relationships AS rl
-                   ON rl.target_id = fs.id
-                      AND rl.target_type = 'fandom'
-                      AND rl.role = 'owner';
         $$ LANGUAGE sql;
     """))
 
