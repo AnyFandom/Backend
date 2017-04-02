@@ -28,11 +28,6 @@ async def error_middleware(app: web.Application, handler):
             raise exc
         except (web.HTTPException, JsonException) as exc:
             resp = exc
-        except asyncpg.exceptions.RaiseError as exc:
-            if exc.message == 'FORBIDDEN':
-                resp = Forbidden()
-            else:
-                resp = fatal()
         except Exception:
             resp = fatal()
 

@@ -7,7 +7,7 @@ from datetime import datetime
 from aiohttp import web, hdrs, web_urldispatcher
 from multidict import CIMultiDict
 
-from ..db.models import Obj
+from ..db.models_base import Obj
 
 
 class Encoder(json.JSONEncoder):

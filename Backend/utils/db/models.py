@@ -1,53 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from collections import Mapping
 from typing import Union, Tuple
-from abc import ABCMeta, abstractmethod
 
 import asyncpg
 
-
-class Obj(Mapping, metaclass=ABCMeta):
-    def __init__(self, data, conn=None, user_id=None):
-        self._data = self._map(dict(data))
-        self._conn = conn
-        self._uid = user_id
-
-    # Mapping
-
-    def __getitem__(self, item):
-        return self._data[item]
-
-    def __len__(self):
-        return len(self._data)
-
-    def __iter__(self):
-        return iter(self._data)
-
-    #########
-
-    def __repr__(self):
-        return '<%s[id=%i]' % (type(self).__name__, self._data['id'])
-
-    @staticmethod
-    @abstractmethod
-    def _map(data):
-        pass
-
-    @classmethod
-    @abstractmethod
-    async def select(cls, conn, user_id, *target_ids):
-        pass
-
-    @classmethod
-    @abstractmethod
-    async def insert(cls, conn, user_id, fields):
-        pass
-
-    @abstractmethod
-    async def update(self, fields):
-        pass
+from .models_base import Obj
+from ..web.exceptions import Forbidden
 
 
 class User(Obj):
@@ -55,12 +14,7 @@ class User(Obj):
         select="SELECT * FROM users %s ORDER BY id ASC",
         update="UPDATE users SET edited_by=$1, "
                "description=$3, avatar=$4 WHERE id=$2",
-        history="SELECT * FROM users_history($1) ORDER BY id, edited_at ASC",
-
-        check=dict(
-            update="SELECT users_update_check($1,$2)",
-            history="SELECT users_history_check($1,$2)"
-        )
+        history="SELECT * FROM users_history ($1) ORDER BY id, edited_at ASC",
     )
 
     @staticmethod
@@ -97,17 +51,26 @@ class User(Obj):
     async def update(self, fields: dict):
 
         # Проверка
-        await self._conn.execute(
-            self._sqls['check']['update'], self._data['id'], self._uid)
+        if (
+            self._data['id'] != self._uid and
+            not await self.check(
+                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+        ):
+            raise Forbidden
 
         await self._conn.execute(
             self._sqls['update'], self._uid, self._data['id'],
             fields.get('description'), fields.get('avatar'))
 
     async def history(self) -> Tuple['User', ...]:
+
         # Проверка
-        await self._conn.execute(
-            self._sqls['check']['history'], self._data['id'], self._uid)
+        if (
+            self._data['id'] != self._uid and
+            not await self.check(
+                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+        ):
+            raise Forbidden
 
         resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
 
@@ -121,12 +84,6 @@ class Fandom(Obj):
         update="UPDATE fandoms SET edited_by=$1,"
                "title=$3, description=$4, avatar=$5 WHERE id=$2",
         history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC",
-
-        check=dict(
-            insert="SELECT fandoms_create_check($1)",
-            update="SELECT fandoms_update_check($1, $2)",
-            history="SELECT fandoms_history_check($1, $2)"
-        )
     )
 
     @staticmethod
@@ -161,7 +118,8 @@ class Fandom(Obj):
                      user_id: int, fields: dict) -> int:
 
         # Проверка
-        await conn.execute(cls._sqls['check']['insert'], user_id)
+        if not await cls.check(conn, 'site', 0, user_id, ('admin',)):
+            raise Forbidden
 
         new_id = await conn.fetchval(
             cls._sqls['insert'], user_id, fields.get('url'),
@@ -173,19 +131,32 @@ class Fandom(Obj):
     async def update(self, fields: dict):
 
         # Проверка
-        await self._conn.execute(
-            self._sqls['check']['update'], self._data['id'], self._uid)
+        if (
+            not await self.check(
+                self._conn, 'fandom', self._data['id'],
+                self._uid, ('admin',)) and
+            not await self.check(
+                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+        ):
+            raise Forbidden
 
         await self._conn.execute(
             self._sqls['update'], self._uid, self._data['id'],
             fields.get('title'), fields.get('description'),
             fields.get('avatar'))
 
-    async def history(self) -> Tuple['Fandom']:
+    async def history(self) -> Tuple['Fandom', ...]:
 
         # Проверка
-        await self._conn.execute(
-            self._sqls['check']['history'], self._data['id'], self._uid)
+
+        if (
+            not await self.check(
+                self._conn, 'fandom', self._data['id'],
+                self._uid, ('admin',)) and
+            not await self.check(
+                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+        ):
+            raise Forbidden
 
         resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
 
