@@ -55,4 +55,3 @@ class FandomHistoryView(BaseView):
         resp = await (await _id_u(self.request)).history()
 
         return JsonResponse(resp)
-

@@ -148,7 +148,6 @@ class Fandom(Obj):
     async def history(self) -> Tuple['Fandom', ...]:
 
         # Проверка
-
         if (
             not await self.check(
                 self._conn, 'fandom', self._data['id'],
