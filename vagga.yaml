@@ -39,6 +39,17 @@ containers:
         owner-gid: 70
         init_command: _init_db
 
+  postgres-temp:
+    setup:
+     - !Container _base
+     - !EnsureDir /data
+     - !Install [postgresql, postgresql-contrib]
+    environ-file: /config/postgres.env
+    volumes:
+      <<: *volumes
+      /data: !Tmpfs
+        mode: 0o777
+
   nginx:
     setup:
       - !Container _base
@@ -94,6 +105,24 @@ commands:
       rm -f /locks/.dbstart.lock
       while sleep 86400; do :; done
 
+  postgres-temp: &postgres-temp !Command
+    container: postgres-temp
+    run: |
+      chown 70:70 /data
+
+      trap "su postgres -c 'pg_ctl -w stop'; trap - INT; kill -INT $$" INT
+
+      su postgres -c 'pg_ctl init'
+      su postgres -c 'pg_ctl start -wo "-F --port=$PG_PORT -k /tmp"'
+
+      su postgres -c "psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASS';\""
+      su postgres -c 'createdb -h 127.0.0.1 -p $PG_PORT -O $PG_USER $PG_DB'
+
+      su postgres -c 'psql -h 127.0.0.1 -p $PG_PORT -d $PG_DB -c "ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO $PG_USER; ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO $PG_USER; ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO $PG_USER;"'
+
+      rm -f /locks/.dbstart.lock
+      while sleep 86400; do :; done
+
   nginx: &nginx !Command
     description: Запустить nginx
     container: nginx
@@ -117,3 +146,21 @@ commands:
 
       nginx: *nginx
       postgres: *postgres
+
+  test-run: !Supervise
+    children:
+      migrate: !Command
+        container: backend
+        run: |
+          touch /locks/.dbstart.lock
+          while [ -f /locks/.dbstart.lock ]; do sleep 0.2; done
+          alembic upgrade head
+          rm -f /locks/.dbmigrate.lock
+          while sleep 86400; do :; done
+
+      i1: !Command
+        <<: *_backend
+        environ: { server_port: 8081 }
+
+      nginx: *nginx
+      postgres: *postgres-temp
