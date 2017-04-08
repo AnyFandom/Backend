@@ -21,7 +21,7 @@ refresh = JsonValidator(
 invalidate = login
 
 change = JsonValidator(
-    Field(True, 'username', string, mn=3, mx=8),
-    Field(True, 'password', string, mn=8, mx=256),
+    Field(True, 'username', string),
+    Field(True, 'password', string),
     Field(True, 'new_password', string, mn=8, mx=256)
 )

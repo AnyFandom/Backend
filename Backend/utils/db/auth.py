@@ -15,8 +15,7 @@ _sqls = {'register': "SELECT * FROM users_create ($1, $2)",
          'change': "UPDATE auth SET password_hash = $1 WHERE id = $2"}
 
 
-async def _reset_random(conn: asyncpg.connection.Connection,
-                        id_: int):
+async def _reset_random(conn: asyncpg.connection.Connection, id_: int):
     await conn.execute(_sqls['reset_random'], id_)
 
 
@@ -24,8 +23,7 @@ async def register(conn: asyncpg.connection.Connection,
                    username: str, password: str) -> int:
     try:
         return await conn.fetchval(
-            _sqls['register'], username, pbkdf2_sha256.hash(password)
-        )
+            _sqls['register'], username, pbkdf2_sha256.hash(password))
     except asyncpg.exceptions.UniqueViolationError as exc:
         if exc.constraint_name == 'user_statics_username_key':
             raise UsernameAlreadyTaken
