@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Tuple
 from collections import Mapping
 from abc import ABCMeta, abstractmethod
 
@@ -43,7 +42,7 @@ class Obj(Mapping, metaclass=ABCMeta):
                                 perm: str) -> bool:
 
         return await conn.fetchval(
-            'SELECT EXISTS (SELECT 1 FROM fandom_staff '
+            'SELECT EXISTS (SELECT 1 FROM fandom_moders '
             'WHERE user_id=$1 AND target_id=$2 AND %s=TRUE)' % perm,
             user_id, target_id
         )

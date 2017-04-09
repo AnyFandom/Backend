@@ -18,6 +18,12 @@ depends_on = None
 
 def upgrade():
     op.get_bind().execute(sa.sql.text("""
+        CREATE TABLE admins (
+            PRIMARY KEY (user_id),
+            
+            user_id BIGINT NOT NULL
+        );
+
         CREATE TABLE auth (
             PRIMARY KEY (id),
             UNIQUE (username),
@@ -95,28 +101,6 @@ def upgrade():
         CREATE TRIGGER users_trig INSTEAD OF INSERT OR UPDATE OR DELETE 
         ON users FOR EACH ROW EXECUTE PROCEDURE users_functions ();
         
-        CREATE FUNCTION users_update_check (
-            target_id BIGINT,
-            user_id   BIGINT
-        ) RETURNS VOID AS $$
-            BEGIN
-                IF target_id != user_id THEN
-                    RAISE EXCEPTION 'FORBIDDEN';
-                END IF;
-            END;
-        $$ LANGUAGE plpgsql;
-        
-        CREATE FUNCTION users_history_check (
-            target_id BIGINT,
-            user_id   BIGINT
-        ) RETURNS VOID AS $$
-            BEGIN
-                IF target_id != user_id THEN
-                    RAISE EXCEPTION 'FORBIDDEN';
-                END IF;
-            END;
-        $$ LANGUAGE plpgsql;
-        
         CREATE FUNCTION users_create (
             username      VARCHAR(120),
             password_hash VARCHAR(130)
@@ -149,8 +133,6 @@ def downgrade():
     op.get_bind().execute(sa.sql.text("""
         DROP FUNCTION users_history (BIGINT);
         DROP FUNCTION users_create (VARCHAR, VARCHAR);
-        DROP FUNCTION users_history_check (BIGINT, BIGINT);
-        DROP FUNCTION users_update_check (BIGINT, BIGINT);
         DROP TRIGGER users_trig ON users;
         DROP FUNCTION users_functions ();
         DROP VIEW users;
@@ -158,4 +140,5 @@ def downgrade():
         DROP TABLE user_statics;
         DROP TABLE user_versions;
         DROP TABLE auth;
+        DROP TABLE admins;
     """))

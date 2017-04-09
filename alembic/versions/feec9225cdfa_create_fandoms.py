@@ -18,24 +18,32 @@ depends_on = None
 
 def upgrade():
     op.get_bind().execute(sa.sql.text("""
-        CREATE TYPE target_type AS ENUM (
-            'site', 'fandom', 'blog', 'post', 'comment'
+        CREATE TABLE fandom_moders (
+            PRIMARY KEY (user_id, target_id),
+
+            user_id   BIGINT NOT NULL,
+            target_id BIGINT NOT NULL,
+            set_by    BIGINT NOT NULL,
+            edit_f    BOOL   NOT NULL,
+            manage_f  BOOL   NOT NULL,
+            ban_f     BOOL   NOT NULL,
+            create_b  BOOL   NOT NULL,
+            edit_b    BOOL   NOT NULL,
+            remove_b  BOOL   NOT NULL,
+            edit_p    BOOL   NOT NULL,
+            remove_p  BOOL   NOT NULL,
+            edit_c    BOOL   NOT NULL,
+            remove_c  BOOL   NOT NULL
         );
         
-        CREATE TYPE role_type AS ENUM (
-            'owner', 'admin', 'moder', 'writer', 'sub', 'banned'
-        );
-        
-        CREATE TABLE relationships (
-            PRIMARY KEY (user_id, target_id, target_type),
+        CREATE TABLE fandom_bans (
+            PRIMARY KEY (user_id, target_id), 
             
-            user_id     BIGINT                         NOT NULL,
-            target_id   BIGINT                         NOT NULL,
-            target_type target_type                    NOT NULL,
-            role        role_type                      NOT NULL,
-            set_by      BIGINT                         NOT NULL,
-            note        VARCHAR(64) DEFAULT ''         NOT NULL,
-            until       TIMESTAMPTZ DEFAULT 'infinity' NOT NULL
+            user_id   BIGINT      NOT NULL,
+            target_id BIGINT      NOT NULL,
+            set_by    BIGINT      NOT NULL,
+            reason    VARCHAR(32) NOT NULL,
+            until     TIMESTAMPTZ NOT NULL
         );
     
         CREATE SEQUENCE fs_id_seq;
@@ -107,46 +115,6 @@ def upgrade():
         CREATE TRIGGER fandoms_trig INSTEAD OF INSERT OR UPDATE OR DELETE
         ON FANDOMS FOR EACH ROW EXECUTE PROCEDURE fandoms_functions ();
         
-        CREATE FUNCTION fandoms_create_check (
-            user_id BIGINT
-        ) RETURNS VOID AS $$
-            BEGIN
-                IF user_id = 0 THEN
-                    RAISE EXCEPTION 'FORBIDDEN';
-                END IF;
-            END;
-        $$ LANGUAGE plpgsql;
-        
-        CREATE FUNCTION fandoms_update_check (
-            f_target_id BIGINT,
-            f_user_id   BIGINT
-        ) RETURNS VOID AS $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM relationships
-                                WHERE target_type = 'fandom'
-                                  AND target_id = f_target_id
-                                  AND user_id = f_user_id
-                                  AND role = 'admin') THEN
-                    RAISE EXCEPTION 'FORBIDDEN';
-                END IF;
-            END;
-        $$ LANGUAGE plpgsql;
-    
-        CREATE FUNCTION fandoms_history_check (
-            f_target_id BIGINT,
-            f_user_id   BIGINT
-        ) RETURNS VOID AS $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM relationships
-                                WHERE target_type = 'fandom'
-                                  AND target_id = f_target_id
-                                  AND user_id = f_user_id
-                                  AND role = 'admin') THEN
-                    RAISE EXCEPTION 'FORBIDDEN';
-                END IF;
-            END;
-        $$ LANGUAGE plpgsql;
-        
         CREATE FUNCTION fandoms_create (
             user_id     BIGINT,
             url         CITEXT,
@@ -158,8 +126,9 @@ def upgrade():
                 INSERT INTO fandoms (id, created_at, url, title, description, avatar)
                 VALUES (nextval('fs_id_seq'), now(), url, title, description, avatar);
                 
-                INSERT INTO relationships (user_id, target_id, target_type, role, set_by)
-                VALUES (user_id, currval('fs_id_seq'), 'fandom', 'admin', user_id);
+                INSERT INTO fandom_moders
+                VALUES (user_id, currval('fs_id_seq'), user_id,
+                        TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
                 
                 RETURN currval('fs_id_seq');
             END;
@@ -181,16 +150,12 @@ def downgrade():
     op.get_bind().execute(sa.sql.text("""
     DROP FUNCTION fandoms_history (BIGINT);
     DROP FUNCTION fandoms_create (BIGINT, CITEXT, VARCHAR, TEXT, VARCHAR);
-    DROP FUNCTION fandoms_history_check (BIGINT, BIGINT);
-    DROP FUNCTION fandoms_update_check (BIGINT, BIGINT);
-    DROP FUNCTION fandoms_create_check (BIGINT);
     DROP TRIGGER fandoms_trig ON fandoms;
     DROP FUNCTION fandoms_functions ();
     DROP VIEW fandoms;
     DROP SEQUENCE fs_id_seq;
     DROP TABLE fandom_versions;
     DROP TABLE fandom_statics;
-    DROP TABLE relationships;
-    DROP TYPE role_type;
-    DROP TYPE target_type;
+    DROP TABLE fandom_bans;
+    DROP TABLE fandom_moders;
     """))
