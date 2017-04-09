@@ -53,8 +53,7 @@ class User(Obj):
         # Проверка
         if (
             self._data['id'] != self._uid and
-            not await self.check(
-                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+            not await self.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -67,8 +66,7 @@ class User(Obj):
         # Проверка
         if (
             self._data['id'] != self._uid and
-            not await self.check(
-                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+            not await self.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -118,7 +116,7 @@ class Fandom(Obj):
                      user_id: int, fields: dict) -> int:
 
         # Проверка
-        if not await cls.check(conn, 'site', 0, user_id, ('admin',)):
+        if not await cls.check_admin(conn, user_id):
             raise Forbidden
 
         new_id = await conn.fetchval(
@@ -132,11 +130,9 @@ class Fandom(Obj):
 
         # Проверка
         if (
-            not await self.check(
-                self._conn, 'fandom', self._data['id'],
-                self._uid, ('admin',)) and
-            not await self.check(
-                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+            not await self.check_fandom_perm(
+                self._conn, self._uid, self._data['id'], 'edit_f') and
+            not await self.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -149,11 +145,9 @@ class Fandom(Obj):
 
         # Проверка
         if (
-            not await self.check(
-                self._conn, 'fandom', self._data['id'],
-                self._uid, ('admin',)) and
-            not await self.check(
-                self._conn, 'site', 0, self._uid, ('admin', 'moder'))
+            not await self.check_fandom_perm(
+                self._conn, self._uid, self._data['id'], 'edit_f') and
+            not await self.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 

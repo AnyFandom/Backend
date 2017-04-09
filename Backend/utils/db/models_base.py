@@ -31,13 +31,21 @@ class Obj(Mapping, metaclass=ABCMeta):
         return '<%s[id=%i]' % (type(self).__name__, self._data['id'])
 
     @staticmethod
-    async def check(conn: asyncpg.connection.Connection,
-                    target_type: str, target_id: int,
-                    user_id: int, roles: Tuple[str, ...]) -> bool:
+    async def check_admin(conn: asyncpg.connection.Connection,
+                          user_id: int) -> bool:
 
         return await conn.fetchval(
-            'SELECT check_rels ($1, $2, $3, $4)',
-            target_type, target_id, user_id, roles
+            'SELECT EXISTS (SELECT 1 FROM admins WHERE user_id=$1)', user_id)
+
+    @staticmethod
+    async def check_fandom_perm(conn: asyncpg.connection.Connection,
+                                user_id: int, target_id: int,
+                                perm: str) -> bool:
+
+        return await conn.fetchval(
+            'SELECT EXISTS (SELECT 1 FROM fandom_staff '
+            'WHERE user_id=$1 AND target_id=$2 AND %s=TRUE)' % perm,
+            user_id, target_id
         )
 
     @staticmethod
