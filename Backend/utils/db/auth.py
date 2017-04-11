@@ -8,11 +8,13 @@ from passlib.hash import pbkdf2_sha256
 
 from ..web.exceptions import UsernameAlreadyTaken, AuthFail
 
-_sqls = {'register': "SELECT * FROM users_create ($1, $2)",
-         'login': "SELECT * FROM auth WHERE username = $1::CITEXT",
-         'check_random': "SELECT random = $1::UUID FROM auth WHERE id = $2",
-         'reset_random': "UPDATE auth SET random = DEFAULT WHERE id = $1",
-         'change': "UPDATE auth SET password_hash = $1 WHERE id = $2"}
+_sqls = dict(
+    register="SELECT * FROM users_create ($1, $2)",
+    login="SELECT * FROM auth WHERE username = $1::CITEXT",
+    check_random="SELECT random = $1::UUID FROM auth WHERE id = $2",
+    reset_random="UPDATE auth SET random = DEFAULT WHERE id = $1",
+    change="UPDATE auth SET password_hash = $1 WHERE id = $2"
+)
 
 
 async def _reset_random(conn: asyncpg.connection.Connection, id_: int):

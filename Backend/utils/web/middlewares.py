@@ -5,12 +5,11 @@ import socket
 import asyncio
 import traceback
 
-import asyncpg
 from aiohttp import web
 from aiohttp.web_request import Request
 
 from .tkn import decode_timed
-from .exceptions import (JsonException, InternalServerError, Forbidden,
+from .exceptions import (JsonException, InternalServerError,
                          InvalidToken, InvalidHeaderValue)
 
 

@@ -5,6 +5,8 @@ from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
 from ..utils.web.exceptions import ObjectNotFound, Forbidden
 
+__all__ = ('UserList', 'User', 'UserHistory')
+
 
 async def _id_u(request) -> m.User:
     conn = request.conn
@@ -26,13 +28,13 @@ async def _id_u(request) -> m.User:
         raise ObjectNotFound
 
 
-class UserListView(BaseView):
+class UserList(BaseView):
     async def get(self):
         return JsonResponse(
             await m.User.select(self.request.conn, self.request.uid))
 
 
-class UserView(BaseView):
+class User(BaseView):
     async def get(self):
         return JsonResponse(await _id_u(self.request))
 
@@ -43,7 +45,7 @@ class UserView(BaseView):
         return JsonResponse()
 
 
-class UserHistoryView(BaseView):
+class UserHistory(BaseView):
     async def get(self):
         resp = await (await _id_u(self.request)).history()
 

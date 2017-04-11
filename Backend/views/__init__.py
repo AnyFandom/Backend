@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .root import RootView
-from .users import UserListView, UserView, UserHistoryView
-from .fandoms import FandomListView, FandomView, FandomHistoryView
+from .root import *  # noqa
+from .auth import *  # noqa
+from .users import *  # noqa
+from .fandoms import *  # noqa
 
-__all__ = ('auth', 'root', 'users',
-           'UserListView', 'UserView' 'UserHistoryView',
-           'FandomListView', 'FandomView', 'FandomHistoryView')
+__all__ = (root.__all__ +
+           auth.__all__ +
+           users.__all__ +
+           fandoms.__all__)

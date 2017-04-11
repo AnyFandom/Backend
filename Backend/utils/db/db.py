@@ -6,12 +6,6 @@ import asyncio
 import asyncpg
 
 
-async def _pool_init(conn):
-    # временный фикс для https://github.com/MagicStack/asyncpg/issues/82
-    await conn.set_builtin_type_codec('citext', codec_name=25)
-    # конец временного фикса
-
-
 class DB:
     def __init__(self, pool: asyncpg.pool.Pool):
         self._pool = pool
@@ -25,7 +19,7 @@ class DB:
         self = cls(await asyncpg.create_pool(
             host=host, port=port, user=user, password=password,
             database=database, min_size=min_size, max_size=max_size,
-            loop=loop, init=_pool_init
+            loop=loop
         ))
 
         return self

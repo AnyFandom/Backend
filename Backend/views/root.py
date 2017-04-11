@@ -3,7 +3,9 @@
 
 from ..utils.web import BaseView, JsonResponse
 
+__all__ = ('Root',)
 
-class RootView(BaseView):
+
+class Root(BaseView):
     async def get(self):
         return JsonResponse({'it': 'works!'})

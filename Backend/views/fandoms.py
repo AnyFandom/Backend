@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from ..utils import db
 from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
-from ..utils.web.exceptions import ObjectNotFound, Forbidden, NotYetImplemented
+from ..utils.web.exceptions import ObjectNotFound
+
+__all__ = ('FandomList', 'Fandom', 'FandomHistory')
 
 
 async def _id_u(request) -> m.Fandom:
@@ -22,7 +23,7 @@ async def _id_u(request) -> m.Fandom:
         raise ObjectNotFound
 
 
-class FandomListView(BaseView):
+class FandomList(BaseView):
     async def get(self):
         return JsonResponse(
             await m.Fandom.select(self.request.conn, self.request.uid))
@@ -39,7 +40,7 @@ class FandomListView(BaseView):
         )
 
 
-class FandomView(BaseView):
+class Fandom(BaseView):
     async def get(self):
         return JsonResponse(await _id_u(self.request))
 
@@ -50,7 +51,7 @@ class FandomView(BaseView):
         return JsonResponse()
 
 
-class FandomHistoryView(BaseView):
+class FandomHistory(BaseView):
     async def get(self):
         resp = await (await _id_u(self.request)).history()
 

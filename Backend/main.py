@@ -6,10 +6,7 @@ import asyncio
 import uvloop
 from aiohttp import web
 
-from .views import (auth, RootView,
-                    UserListView, UserView, UserHistoryView,
-                    FandomListView, FandomView, FandomHistoryView)
-
+from . import views
 from .utils import DB
 from .utils.web import middlewares, Router
 
@@ -24,28 +21,28 @@ async def create_app(loop: asyncio.AbstractEventLoop,
 
     url = app.router.add_route
 
-    url('*', '/', RootView)
+    url('*', '/', views.root.Root)
 
-    url('POST', '/auth/register', auth.register)
-    url('POST', '/auth/login', auth.login)
-    url('POST', '/auth/refresh', auth.refresh)
-    url('POST', '/auth/invalidate', auth.invalidate)
-    url('POST', '/auth/change', auth.change)
-    url('POST', '/auth/reset', auth.reset)
+    url('POST', '/auth/register', views.register)
+    url('POST', '/auth/login', views.login)
+    url('POST', '/auth/refresh', views.refresh)
+    url('POST', '/auth/invalidate', views.invalidate)
+    url('POST', '/auth/change', views.change)
+    url('POST', '/auth/reset', views.reset)
 
-    url('*', '/users', UserListView)
-    url('*', '/users/{first:(u)}/{second:\w+}', UserView)  # URL
-    url('*', '/users/{first:(u)}/{second:\w+}/history', UserHistoryView)
+    url('*', '/users', views.UserList)
+    url('*', '/users/{first:(u)}/{second:\w+}', views.User)
+    url('*', '/users/{first:(u)}/{second:\w+}/history', views.UserHistory)
 
-    url('*', '/users/{first:\w+}', UserView)               # ID | CURRENT
-    url('*', '/users/{first:\w+}/history', UserHistoryView)
+    url('*', '/users/{first:\w+}', views.User)
+    url('*', '/users/{first:\w+}/history', views.UserHistory)
 
-    url('*', '/fandoms', FandomListView)
-    url('*', '/fandoms/{first:(u)}/{second:\w+}', FandomView)
-    url('*', '/fandoms/{first:(u)}/{second:\w+}/history', FandomHistoryView)
+    url('*', '/fandoms', views.fandoms.FandomList)
+    url('*', '/fandoms/{first:(u)}/{second:\w+}', views.Fandom)
+    url('*', '/fandoms/{first:(u)}/{second:\w+}/history', views.FandomHistory)
 
-    url('*', '/fandoms/{first:\w+}', FandomView)
-    url('*', '/fandoms/{first:\w+}/history', FandomHistoryView)
+    url('*', '/fandoms/{first:\w+}', views.Fandom)
+    url('*', '/fandoms/{first:\w+}/history', views.FandomHistory)
 
     config['access_key'] = config['access_key'].encode('utf-8')
     config['refresh_key'] = config['refresh_key'].encode('utf-8')

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import time
-import base64
 import socket
 
 from ..utils import db
@@ -10,6 +8,8 @@ from ..utils.web import JsonResponse
 from ..utils.web import validators as v
 from ..utils.web.tkn import encode_timed, decode_timed
 from ..utils.web.exceptions import NotYetImplemented, InvalidToken
+
+__all__ = ('register', 'login', 'refresh', 'invalidate', 'change', 'reset')
 
 
 async def register(request):
