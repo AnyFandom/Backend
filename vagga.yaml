@@ -77,12 +77,9 @@ commands:
       createdb -h 127.0.0.1 -p $PG_PORT -O $PG_USER $PG_DB
 
       psql -h 127.0.0.1 -p $PG_PORT -d $PG_DB -c "\
-      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public \
-      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO $PG_USER; \
-      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public \
-      GRANT USAGE, SELECT ON SEQUENCES TO $PG_USER; \
-      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public \
-      GRANT EXECUTE ON FUNCTIONS TO $PG_USER;"
+      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO $PG_USER; \
+      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO $PG_USER; \
+      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO $PG_USER;"
 
       pg_ctl stop
 
@@ -118,7 +115,11 @@ commands:
       su postgres -c "psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASS';\""
       su postgres -c 'createdb -h 127.0.0.1 -p $PG_PORT -O $PG_USER $PG_DB'
 
-      su postgres -c 'psql -h 127.0.0.1 -p $PG_PORT -d $PG_DB -c "ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO $PG_USER; ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO $PG_USER; ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO $PG_USER;"'
+      su postgres -c '\
+      psql -h 127.0.0.1 -p $PG_PORT -d $PG_DB -c "\
+      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO $PG_USER; \
+      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO $PG_USER; \
+      ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO $PG_USER;"'
 
       rm -f /locks/.dbstart.lock
       while sleep 86400; do :; done
@@ -160,7 +161,7 @@ commands:
 
       i1: !Command
         <<: *_backend
-        environ: { server_port: 8081 }
+        environ: { server_port: 8081, test: 1 }
 
       nginx: *nginx
       postgres: *postgres-temp

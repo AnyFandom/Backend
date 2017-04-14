@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import pytest
 import requests
 
 
@@ -9,6 +10,11 @@ access_token = ''
 
 
 class TestAuth:
+    def test_init(self, url):
+        r = requests.post(url+'/clear_db')
+        if r.status_code != 200:
+            pytest.exit('Server must be running in test mode')
+
     # --- REGISTER --- #
 
     def test_register_without_anything(self, url):

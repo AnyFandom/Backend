@@ -44,6 +44,10 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{first:\w+}', views.Fandom)
     url('*', '/fandoms/{first:\w+}/history', views.FandomHistory)
 
+    if bool(int(config['test'])):
+        print('RUNNING IN TEST MODE')
+        url('POST', '/clear_db', views.clear_db)
+
     config['access_key'] = config['access_key'].encode('utf-8')
     config['refresh_key'] = config['refresh_key'].encode('utf-8')
 
