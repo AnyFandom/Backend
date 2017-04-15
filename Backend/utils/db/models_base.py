@@ -8,10 +8,11 @@ import asyncpg
 
 
 class Obj(Mapping, metaclass=ABCMeta):
-    def __init__(self, data, conn=None, user_id=None):
-        self._data = self._map(dict(data))
+    def __init__(self, data, conn=None, user_id=None, meta=None):
+        self._data = self._map(dict(data), meta)
         self._conn = conn
         self._uid = user_id
+        self._meta = meta
 
     # Mapping
 
@@ -27,7 +28,7 @@ class Obj(Mapping, metaclass=ABCMeta):
     #########
 
     def __repr__(self):
-        return '<%s[id=%i]' % (type(self).__name__, self._data['id'])
+        return '<%s id=%i>' % (type(self).__name__, self._data['id'])
 
     @staticmethod
     async def check_admin(conn: asyncpg.connection.Connection,
@@ -49,7 +50,7 @@ class Obj(Mapping, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def _map(data):
+    def _map(data, meta):
         pass
 
     @classmethod

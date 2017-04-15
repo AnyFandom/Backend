@@ -5,7 +5,7 @@ from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
 from ..utils.web.exceptions import ObjectNotFound
 
-__all__ = ('FandomList', 'Fandom', 'FandomHistory')
+__all__ = ('FandomList', 'Fandom', 'FandomHistory', 'FandomModers')
 
 
 async def _id_u(request) -> m.Fandom:
@@ -56,3 +56,11 @@ class FandomHistory(BaseView):
         resp = await (await _id_u(self.request)).history()
 
         return JsonResponse(resp)
+
+
+class FandomModers(BaseView):
+    async def get(self):
+        resp = await (await _id_u(self.request)).moders_select()
+
+        return JsonResponse(resp)
+

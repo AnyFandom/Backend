@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import time
 import socket
 import asyncio
 import traceback
@@ -11,6 +12,16 @@ from aiohttp.web_request import Request
 from .tkn import decode_timed
 from .exceptions import (JsonException, InternalServerError,
                          InvalidToken, InvalidHeaderValue)
+
+
+async def timeit_middleware(app: web.Application, handler):
+    async def middleware_handler(request: Request):
+        start_time = time.time()
+        resp = await handler(request)
+        print(format(time.time() - start_time, '.15f'), ':', request.method, request.rel_url)
+
+        return resp
+    return middleware_handler
 
 
 async def error_middleware(app: web.Application, handler):

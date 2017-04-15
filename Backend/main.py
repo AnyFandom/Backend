@@ -40,13 +40,16 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms', views.fandoms.FandomList)
     url('*', '/fandoms/{first:(u)}/{second:\w+}', views.Fandom)
     url('*', '/fandoms/{first:(u)}/{second:\w+}/history', views.FandomHistory)
+    url('*', '/fandoms/{first:(u)}/{second:\w+}/moders', views.FandomModers)
 
     url('*', '/fandoms/{first:\w+}', views.Fandom)
     url('*', '/fandoms/{first:\w+}/history', views.FandomHistory)
+    url('*', '/fandoms/{first:\w+}/moders', views.FandomModers)
 
     if bool(int(config['test'])):
         print('RUNNING IN TEST MODE')
         url('POST', '/clear_db', views.clear_db)
+        app.middlewares.insert(0, middlewares.timeit_middleware)
 
     config['access_key'] = config['access_key'].encode('utf-8')
     config['refresh_key'] = config['refresh_key'].encode('utf-8')

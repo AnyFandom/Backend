@@ -8,9 +8,11 @@ __all__ = ('clear_db',)
 
 async def clear_db(request):
     async with request.app['db'].acquire() as conn:
-        await conn.execute(
-            'TRUNCATE admins, auth, user_statics, user_versions, fandom_bans,'
-            'fandom_moders, fandom_statics, fandom_versions'
-        )
+        tables = await conn.fetch(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = 'public' AND table_type = 'BASE TABLE' "
+            "AND table_name != 'alembic_version'")
+        sql = 'TRUNCATE ' + ', '.join(x['table_name'] for x in tables)
+        await conn.execute(sql)
 
-    return JsonResponse()
+    return JsonResponse(sql)

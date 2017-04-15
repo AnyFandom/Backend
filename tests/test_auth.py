@@ -4,7 +4,6 @@
 import pytest
 import requests
 
-
 refresh_token = ''
 access_token = ''
 
