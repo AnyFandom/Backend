@@ -79,7 +79,7 @@ class User(Obj):
 
         resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
 
-        return tuple(map(self.__class__, resp))
+        return tuple(self.__class__(x) for x in resp)
 
 
 class Fandom(Obj):
@@ -175,7 +175,7 @@ class Fandom(Obj):
 
         resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
 
-        return tuple(map(self.__class__, resp))
+        return tuple(self.__class__(x) for x in resp)
 
     async def moders_select(self) -> Tuple[User, ...]:
 

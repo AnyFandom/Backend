@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import uuid
+from typing import Tuple
 
 import asyncpg
 from passlib.hash import pbkdf2_sha256
@@ -17,8 +18,8 @@ _sqls = dict(
 )
 
 
-async def _reset_random(conn: asyncpg.connection.Connection, id_: int):
-    await conn.execute(_sqls['reset_random'], id_)
+async def _reset_random(conn: asyncpg.connection.Connection, user_id: int):
+    await conn.execute(_sqls['reset_random'], user_id)
 
 
 async def register(conn: asyncpg.connection.Connection,
@@ -26,13 +27,12 @@ async def register(conn: asyncpg.connection.Connection,
     try:
         return await conn.fetchval(
             _sqls['register'], username, pbkdf2_sha256.hash(password))
-    except asyncpg.exceptions.UniqueViolationError as exc:
-        if exc.constraint_name == 'user_statics_username_key':
-            raise UsernameAlreadyTaken
+    except asyncpg.exceptions.UniqueViolationError:
+        raise UsernameAlreadyTaken
 
 
 async def login(conn: asyncpg.connection.Connection,
-                username: str, password: str) -> (int, str):
+                username: str, password: str) -> Tuple[int, uuid.UUID]:
     data = await conn.fetchrow(_sqls['login'], username)
 
     if not data or not pbkdf2_sha256.verify(password, data['password_hash']):
@@ -42,21 +42,22 @@ async def login(conn: asyncpg.connection.Connection,
 
 
 async def check_random(conn: asyncpg.connection.Connection,
-                       id_: int, random: str) -> bool:
+                       user_id: int, random: bytes) -> bool:
     return await conn.fetchval(
-        _sqls['check_random'], uuid.UUID(bytes=random), id_)
+        _sqls['check_random'], uuid.UUID(bytes=random), user_id)
 
 
 async def invalidate(conn: asyncpg.connection.Connection,
                      username: str, password: str):
-    id_, _ = await login(conn, username, password)
+    user_id, _ = await login(conn, username, password)
 
-    await _reset_random(conn, id_)
+    await _reset_random(conn, user_id)
 
 
 async def change(conn: asyncpg.connection.Connection,
                  username: str, password: str, new_password: str):
-    id_, _ = await login(conn, username, password)
+    user_id, _ = await login(conn, username, password)
 
-    await _reset_random(conn, id_)
-    await conn.execute(_sqls['change'], pbkdf2_sha256.hash(new_password), id_)
+    await _reset_random(conn, user_id)
+    await conn.execute(
+        _sqls['change'], pbkdf2_sha256.hash(new_password), user_id)

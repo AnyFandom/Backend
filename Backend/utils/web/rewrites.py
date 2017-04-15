@@ -24,7 +24,7 @@ class Encoder(json.JSONEncoder):
 
 class JsonResponse(web.Response):
     def __init__(self, body=None, status: str='success', *,
-                 status_code=200, headers=None, **kwargs):
+                 status_code=200, headers=None, **kwargs) -> None:
         if headers is None:
             headers = CIMultiDict()
 

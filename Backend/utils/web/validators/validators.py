@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
-from typing import Any
-from types import FunctionType
+from typing import Any, Callable
 
 from aiohttp.web_request import Request
 
@@ -37,8 +36,8 @@ def integer(val: Any) -> int:
 
 
 class Field:
-    def __init__(self, required: bool, name: str, func: FunctionType,
-                 default: Any=None, **args):
+    def __init__(self, required: bool, name: str, func: Callable,
+                 default: Any=None, **args) -> None:
         self.name = name
 
         self._req = required
@@ -57,7 +56,7 @@ class Field:
 
 
 class JsonValidator:
-    def __init__(self, *fields: Field):
+    def __init__(self, *fields: Field) -> None:
         self._f = fields
 
     def __call__(self, obj: dict) -> dict:

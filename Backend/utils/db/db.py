@@ -7,7 +7,7 @@ import asyncpg
 
 
 class DB:
-    def __init__(self, pool: asyncpg.pool.Pool):
+    def __init__(self, pool: asyncpg.pool.Pool) -> None:
         self._pool = pool
 
     @classmethod

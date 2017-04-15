@@ -28,17 +28,17 @@ async def register(request):
 async def login(request):
     """Получение токенов по логину/паролю"""
     body = await v.get_body(request, v.auth.login)
-    id_, rand = await db.auth.login(
+    user_id, rand = await db.auth.login(
         request.conn, body['username'], body['password']
     )
 
     return JsonResponse(dict(
         access_token=encode_timed(
-            'I4s', id_, socket.inet_aton(request.headers['X-Real-IP']),
+            'I4s', user_id, socket.inet_aton(request.headers['X-Real-IP']),
             key=request.app['cfg']['access_key'], life=600
         ).decode('utf-8'),
         refresh_token=encode_timed(
-            'I16s', id_, rand.bytes, life=2419200,
+            'I16s', user_id, rand.bytes, life=2419200,
             key=request.app['cfg']['refresh_key']
         ).decode('utf-8')
     ))

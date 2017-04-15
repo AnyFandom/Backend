@@ -7,9 +7,9 @@ from .rewrites import JsonResponse
 
 
 class JsonException(JsonResponse, Exception):
-    status = None
-    status_code = None
-    description = None
+    status: str = None
+    status_code: int = None
+    description: str = None
 
     def __init__(self, *, headers=None, reason=None, details=None):
         body = {'code': type(self).__name__, 'description': self.description}
@@ -74,7 +74,7 @@ class MethodNotAllowed(FailException):
     status_code = 405
     description = 'This resource does not support the specified HTTP method.'
 
-    def __init__(self, allowed_methods: set, **kwargs):
+    def __init__(self, allowed_methods: set, **kwargs) -> None:
         super().__init__(**kwargs)
 
         self.headers[hdrs.ALLOW] = ', '.join(sorted(allowed_methods))
@@ -94,7 +94,7 @@ class ExpectationFailed(FailException):
     status_code = 417
     description = 'Unknown Expect: %s'
 
-    def __init__(self, expect: str, **kwargs):
+    def __init__(self, expect: str, **kwargs) -> None:
         self.description %= expect
 
         super().__init__(**kwargs)
