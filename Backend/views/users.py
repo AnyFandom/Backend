@@ -10,20 +10,19 @@ __all__ = ('UserList', 'User', 'UserHistory')
 
 async def _id_u(request) -> m.User:
     conn = request.conn
-    first = request.match_info['first']
-    second = request.match_info.get('second', None)
+    arg = request.match_info['arg']
     uid = request.uid
 
     try:
-        if first == 'current':
+        if arg == 'current':
             if uid != 0:
                 return (await m.User.select(conn, uid, uid))[0]
             else:
                 raise Forbidden
-        elif first == 'u' and 'second' is not None:
-            return (await m.User.select(conn, uid, second, u=True))[0]
+        elif arg[:2] == 'u/':
+            return (await m.User.select(conn, uid, arg[2:], u=True))[0]
         else:
-            return (await m.User.select(conn, uid, first))[0]
+            return (await m.User.select(conn, uid, arg))[0]
     except (IndexError, ValueError):
         raise ObjectNotFound
 

@@ -19,6 +19,8 @@ async def create_app(loop: asyncio.AbstractEventLoop,
         middlewares.database_middleware
     ])
 
+    _arg = '(\w+)|(u\/\w+)'
+
     url = app.router.add_route
 
     url('*', '/', views.root.Root)
@@ -31,20 +33,13 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('POST', '/auth/reset', views.reset)
 
     url('*', '/users', views.UserList)
-    url('*', '/users/{first:(u)}/{second:\w+}', views.User)
-    url('*', '/users/{first:(u)}/{second:\w+}/history', views.UserHistory)
-
-    url('*', '/users/{first:\w+}', views.User)
-    url('*', '/users/{first:\w+}/history', views.UserHistory)
+    url('*', '/users/{arg:' + _arg + '}', views.User)
+    url('*', '/users/{arg:' + _arg + '}/history', views.UserHistory)
 
     url('*', '/fandoms', views.fandoms.FandomList)
-    url('*', '/fandoms/{first:(u)}/{second:\w+}', views.Fandom)
-    url('*', '/fandoms/{first:(u)}/{second:\w+}/history', views.FandomHistory)
-    url('*', '/fandoms/{first:(u)}/{second:\w+}/moders', views.FandomModers)
-
-    url('*', '/fandoms/{first:\w+}', views.Fandom)
-    url('*', '/fandoms/{first:\w+}/history', views.FandomHistory)
-    url('*', '/fandoms/{first:\w+}/moders', views.FandomModers)
+    url('*', '/fandoms/{arg:' + _arg + '}', views.Fandom)
+    url('*', '/fandoms/{arg:' + _arg + '}/history', views.FandomHistory)
+    url('*', '/fandoms/{arg:' + _arg + '}/moders', views.FandomModers)
 
     if bool(int(config['test'])):
         print('RUNNING IN TEST MODE')

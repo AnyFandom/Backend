@@ -10,15 +10,14 @@ __all__ = ('FandomList', 'Fandom', 'FandomHistory', 'FandomModers')
 
 async def _id_u(request) -> m.Fandom:
     conn = request.conn
-    first = request.match_info['first']
-    second = request.match_info.get('second', None)
+    arg = request.match_info['arg']
     uid = request.uid
 
     try:
-        if first == 'u' and second is not None:
-            return (await m.Fandom.select(conn, uid, second, u=True))[0]
+        if arg[:2] == 'u/':
+            return (await m.Fandom.select(conn, uid, arg[2:], u=True))[0]
         else:
-            return (await m.Fandom.select(conn, uid, first))[0]
+            return (await m.Fandom.select(conn, uid, arg))[0]
     except (IndexError, ValueError):
         raise ObjectNotFound
 
