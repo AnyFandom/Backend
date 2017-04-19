@@ -4,7 +4,7 @@
 from .validators import JsonValidator, Field, string
 
 
-add = JsonValidator(
+insert = JsonValidator(
     Field(True, 'title', string, mn=3, mx=64),
     Field(True, 'url', string, mn=6, mx=32),
     Field(False, 'description', string, mn=0, mx=65535, default=''),

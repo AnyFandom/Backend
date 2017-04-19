@@ -28,7 +28,7 @@ class FandomList(BaseView):
             await m.Fandom.select(self.request.conn, self.request.uid))
 
     async def post(self):
-        body = await v.get_body(self.request, v.fandoms.add)
+        body = await v.get_body(self.request, v.fandoms.insert)
 
         new_id = await m.Fandom.insert(
             self.request.conn, self.request.uid, body)
