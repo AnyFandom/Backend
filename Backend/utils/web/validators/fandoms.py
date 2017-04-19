@@ -38,3 +38,7 @@ moders_update = JsonValidator(
     Field(False, 'edit_p', boolean),
     Field(False, 'edit_c', boolean),
 )
+
+moders_delete = JsonValidator(
+    Field(True, 'user_id', integer)
+)

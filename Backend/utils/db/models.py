@@ -110,6 +110,10 @@ class Fandom(Obj):
             "edit_c=$9 WHERE user_id=$1 RETURNING TRUE;"
         ),
 
+        moders_delete=(
+            "DELETE FROM fandom_moders "
+            "WHERE user_id=$1 AND target_id=$2 RETURNING TRUE"
+        )
     )
 
     @staticmethod
@@ -240,5 +244,19 @@ class Fandom(Obj):
             fields['edit_f'], fields['manage_f'], fields['ban_f'],
             fields['create_b'], fields['edit_b'],
             fields['edit_p'], fields['edit_c']
+        ):
+            raise NotModer
+
+    async def moders_delete(self, fields: dict):
+
+        if (
+            not await self.check_fandom_perm(
+                self._conn, self._uid, self._data['id'], 'manage_f') and
+            not await self.check_admin(self._conn, self._uid)
+        ):
+            raise Forbidden
+
+        if not await self._conn.fetchval(
+            self._sqls['moders_delete'], fields['user_id'], self._data['id']
         ):
             raise NotModer

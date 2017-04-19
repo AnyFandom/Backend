@@ -74,3 +74,9 @@ class FandomModers(BaseView):
         await (await _id_u(self.request)).moders_update(body)
 
         return JsonResponse()
+
+    async def delete(self):
+        body = await v.get_body(self.request, v.fandoms.moders_delete)
+        await (await _id_u(self.request)).moders_delete(body)
+
+        return JsonResponse()
