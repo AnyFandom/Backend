@@ -6,7 +6,7 @@ from typing import Union, Tuple
 import asyncpg
 
 from .models_base import Obj
-from ..web.exceptions import Forbidden
+from ..web.exceptions import Forbidden, ObjectNotFound, AlreadyModer
 
 
 class User(Obj):
@@ -97,6 +97,12 @@ class Fandom(Obj):
             "INNER JOIN users AS u ON fm.user_id=u.id "
             "WHERE fm.target_id=$1"
         ),
+
+        moders_insert=(
+            "INSERT INTO fandom_moders (user_id, target_id, edit_f, "
+            "manage_f, ban_f, create_b, edit_b, edit_p, edit_c)"
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+        )
     )
 
     @staticmethod
@@ -186,3 +192,25 @@ class Fandom(Obj):
                 'create_b', 'edit_b', 'edit_p', 'edit_c')
 
         return tuple(User(x, self._conn, self._uid, meta) for x in resp)
+
+    async def moders_insert(self, fields: dict):
+
+        if (
+            not await self.check_fandom_perm(
+                self._conn, self._uid, self._data['id'], 'manage_f') and
+            not await self.check_admin(self._conn, self._uid)
+        ):
+            raise Forbidden
+
+        if not await User.select(self._conn, self._uid, fields['user_id']):
+            raise ObjectNotFound
+
+        try:
+            await self._conn.execute(
+                self._sqls['moders_insert'], fields['user_id'],
+                self._data['id'], fields['edit_f'], fields['manage_f'],
+                fields['ban_f'], fields['create_b'], fields['edit_b'],
+                fields['edit_p'], fields['edit_c']
+            )
+        except asyncpg.exceptions.UniqueViolationError:
+            raise AlreadyModer

@@ -90,6 +90,11 @@ class FandomUrlAlreadyTaken(FailException):
     description = 'Fandom with specified url already exists.'
 
 
+class AlreadyModer(FailException):
+    status_code = 409
+    description = 'This user is already moderator of this fandom'
+
+
 class ExpectationFailed(FailException):
     status_code = 417
     description = 'Unknown Expect: %s'

@@ -63,3 +63,9 @@ class FandomModers(BaseView):
 
         return JsonResponse(resp)
 
+    async def post(self):
+        body = await v.get_body(self.request, v.fandoms.moders_insert)
+        await (await _id_u(self.request)).moders_insert(body)
+
+        return JsonResponse(status_code=201)
+

@@ -35,6 +35,11 @@ def integer(val: Any) -> int:
     return val
 
 
+def boolean(val: Any) -> bool:
+    _check(isinstance(val, bool), 'Expected bool, got %s' % type(val).__name__)
+    return val
+
+
 class Field:
     def __init__(self, required: bool, name: str, func: Callable,
                  default: Any=None, **args) -> None:
