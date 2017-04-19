@@ -1,0 +1,185 @@
+description: Create fandoms
+
+revision: ebef7e75726f
+down_revision: 3f9ad65ecd20
+
+upgrade: |
+  CREATE TABLE fandom_moders (
+    PRIMARY KEY (user_id, target_id),
+    
+    user_id   BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    edit_f    BOOL   NOT NULL,
+    manage_f  BOOL   NOT NULL,
+    ban_f     BOOL   NOT NULL,
+    create_b  BOOL   NOT NULL,
+    edit_b    BOOL   NOT NULL,
+    edit_p    BOOL   NOT NULL,
+    edit_c    BOOL   NOT NULL
+  );
+
+  CREATE SEQUENCE fs_id_seq;
+  CREATE TABLE fandom_bans (
+    PRIMARY KEY (user_id, target_id), 
+    
+    user_id   BIGINT      NOT NULL,
+    target_id BIGINT      NOT NULL,
+    set_by    BIGINT      NOT NULL,
+    reason    VARCHAR(32) NOT NULL,
+    until     TIMESTAMPTZ NOT NULL
+  );
+
+  CREATE TABLE fandom_statics (
+    PRIMARY KEY (id),
+    UNIQUE (url),
+    
+    id         BIGINT                    NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    url        CITEXT                    NOT NULL
+  );
+  
+  CREATE TABLE fandom_versions (
+    PRIMARY KEY (id, edited_at),
+    
+    id          BIGINT                    NOT NULL,
+    edited_at   TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by   BIGINT                    NOT NULL,
+    title       VARCHAR(120)              NOT NULL,
+    description TEXT DEFAULT ''           NOT NULL,
+    avatar      VARCHAR(64) DEFAULT ''    NOT NULL
+  );
+  
+  CREATE VIEW fandoms AS (
+    SELECT
+      fs.id,
+      fs.created_at,
+      fv.edited_at,
+      fv.edited_by,
+      fv.title,
+      fs.url,
+      fv.description,
+      fv.avatar
+    FROM fandom_statics as fs
+    INNER JOIN fandom_versions AS fv ON fv.id = fs.id
+      AND fv.edited_at = (
+        SELECT max(fv2.edited_at)
+        FROM fandom_versions AS fv2
+        WHERE fv2.id = fs.id
+      )
+  );
+
+  CREATE FUNCTION fandoms_functions () RETURNS TRIGGER AS $$
+    BEGIN
+
+      IF TG_OP = 'INSERT' THEN
+
+        INSERT INTO fandom_statics (id, created_at, url)
+        VALUES (NEW.id, NEW.created_at, NEW.url);
+
+        INSERT INTO fandom_versions (id, edited_at, edited_by, title, description, avatar)
+        VALUES (NEW.id, NEW.created_at, NEW.id, NEW.title, NEW.description, NEW.avatar);
+
+        RETURN NEW;
+
+      ELSIF TG_OP = 'UPDATE' THEN
+
+        NEW.title = COALESCE(NEW.title, OLD.title);
+        NEW.description = COALESCE(NEW.description, OLD.description);
+        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+
+        IF
+          NEW.description = OLD.description AND
+          NEW.avatar = OLD.avatar AND
+          NEW.title = OLD.title
+        THEN
+          RETURN NULL;
+        END IF;
+
+        INSERT INTO fandom_versions (id, edited_at, edited_by, title, description, avatar)
+        VALUES (OLD.id, now(), NEW.edited_by, NEW.title, NEW.description, NEW.avatar);
+
+        RETURN NEW;
+
+      ELSE
+        RETURN NULL;
+      END IF;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER functions INSTEAD OF INSERT OR UPDATE OR DELETE
+  ON fandoms FOR EACH ROW EXECUTE PROCEDURE fandoms_functions ();
+
+  CREATE FUNCTION fandoms_create (
+    user_id     BIGINT,
+    url         CITEXT,
+    title       VARCHAR(120),
+    description TEXT,
+    avatar      VARCHAR(64)
+  ) RETURNS BIGINT AS $$
+    BEGIN
+
+      INSERT INTO fandoms (id, created_at, url, title, description, avatar)
+      VALUES (nextval('fs_id_seq'), now(), url, title, description, avatar);
+
+      INSERT INTO fandom_moders
+      VALUES (user_id, currval('fs_id_seq'),
+              TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
+
+      RETURN currval('fs_id_seq');
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE FUNCTION fandoms_history (
+    target_id BIGINT
+  ) RETURNS SETOF fandoms AS $$
+
+    SELECT
+      fs.id,
+      fs.created_at,
+      fv.edited_at,
+      fv.edited_by,
+      fv.title,
+      fs.url,
+      fv.description,
+      fv.avatar
+    FROM fandom_statics as fs
+    INNER JOIN fandom_versions AS fv ON fv.id = fs.id
+    WHERE fs.id = target_id;
+
+  $$ LANGUAGE sql;
+
+  CREATE FUNCTION fandom_moders_update () RETURNS TRIGGER AS $$
+    BEGIN
+
+      NEW.edit_f := COALESCE(NEW.edit_f, OLD.edit_f);
+      NEW.manage_f := COALESCE(NEW.manage_f, OLD.manage_f);
+      NEW.ban_f := COALESCE(NEW.ban_f, OLD.ban_f);
+      NEW.create_b := COALESCE(NEW.create_b, OLD.create_b);
+      NEW.edit_b := COALESCE(NEW.edit_b, OLD.edit_b);
+      NEW.edit_p := COALESCE(NEW.edit_p, OLD.edit_p);
+      NEW.edit_c := COALESCE(NEW.edit_c, OLD.edit_c);
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER update BEFORE UPDATE
+  ON fandom_moders FOR EACH ROW EXECUTE PROCEDURE fandom_moders_update ();
+
+
+downgrade: |
+  DROP TRIGGER update ON fandom_moders;
+  DROP FUNCTION fandom_moders_update ();
+  DROP FUNCTION fandoms_history (BIGINT);
+  DROP FUNCTION fandoms_create (BIGINT, CITEXT, VARCHAR, TEXT, VARCHAR);
+  DROP TRIGGER functions ON fandoms;
+  DROP FUNCTION fandoms_functions ();
+  DROP VIEW fandoms;
+  DROP TABLE fandom_versions;
+  DROP TABLE fandom_statics;
+  DROP SEQUENCE fs_id_seq;
+  DROP TABLE fandom_bans;
+  DROP TABLE fandom_moders;

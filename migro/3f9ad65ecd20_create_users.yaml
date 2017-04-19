@@ -1,0 +1,139 @@
+description: Create users
+
+revision: 3f9ad65ecd20
+down_revision: 0af4a475d46a
+
+upgrade: |
+  CREATE TABLE auth (
+    PRIMARY KEY (id),
+    UNIQUE (username),
+
+    id            BIGINT                         NOT NULL,
+    username      CITEXT                         NOT NULL,
+    password_hash VARCHAR(130)                   NOT NULL,
+    random        UUID DEFAULT gen_random_uuid() NOT NULL
+  );
+
+  CREATE SEQUENCE us_id_seq;
+  CREATE TABLE user_statics (
+    PRIMARY KEY (id),
+    UNIQUE (username),
+
+    id         BIGINT                    NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    username   CITEXT                    NOT NULL
+  );
+
+  CREATE TABLE user_versions (
+    PRIMARY KEY (id, edited_at),
+
+    id          BIGINT                    NOT NULL,
+    edited_at   TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by   BIGINT                    NOT NULL,
+    description TEXT DEFAULT ''           NOT NULL,
+    avatar      VARCHAR(64) DEFAULT ''    NOT NULL
+  );
+
+  CREATE VIEW users AS (
+    SELECT
+      us.id,
+      us.created_at,
+      uv.edited_at,
+      uv.edited_by,
+      us.username,
+      uv.description,
+      uv.avatar
+    FROM user_statics AS us
+    INNER JOIN user_versions AS uv ON uv.id = us.id
+      AND uv.edited_at = (
+        SELECT max(uv2.edited_at)
+        FROM user_versions AS uv2
+        WHERE uv2.id = us.id
+      )
+  );
+
+  CREATE FUNCTION users_functions () RETURNS TRIGGER AS $$
+    BEGIN
+
+      IF TG_OP = 'INSERT' THEN
+
+        INSERT INTO user_statics (id, created_at, username)
+        VALUES (NEW.id, NEW.created_at, NEW.username);
+
+        INSERT INTO user_versions (id, edited_at, edited_by)
+        VALUES (NEW.id, NEW.created_at, NEW.id);
+
+        RETURN NEW;
+
+      ELSIF TG_OP = 'UPDATE' THEN
+
+        NEW.description = COALESCE(NEW.description, OLD.description);
+        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+
+        IF
+          NEW.description = OLD.description AND
+          NEW.avatar = OLD.avatar
+        THEN
+          RETURN NULL;
+        END IF;
+
+        INSERT INTO user_versions (id, edited_at, edited_by, description, avatar)
+        VALUES (OLD.id, now(), NEW.edited_by, NEW.description, NEW.avatar);
+
+        RETURN NEW;
+
+      ELSE
+        RETURN NULL;
+      END IF;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER functions INSTEAD OF INSERT OR UPDATE OR DELETE
+  ON users FOR EACH ROW EXECUTE PROCEDURE users_functions ();
+
+  CREATE FUNCTION users_create (
+    username      VARCHAR(120),
+    password_hash VARCHAR(130)
+  ) RETURNS BIGINT AS $$
+    BEGIN
+
+      INSERT INTO users (id, created_at, username)
+      VALUES (nextval('us_id_seq'), now(), username);
+
+      INSERT INTO auth (id, username, password_hash)
+      VALUES (currval('us_id_seq'), username, password_hash);
+
+      RETURN currval('us_id_seq');
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE FUNCTION users_history (
+    target_id BIGINT
+  ) RETURNS SETOF users AS $$
+
+    SELECT
+      us.id,
+      us.created_at,
+      uv.edited_at,
+      uv.edited_by,
+      us.username,
+      uv.description,
+      uv.avatar
+    FROM user_statics AS us
+    INNER JOIN user_versions AS uv ON uv.id = us.id
+    WHERE us.id = target_id;
+
+  $$ LANGUAGE sql;
+
+downgrade: |
+  DROP FUNCTION users_history (BIGINT);
+  DROP FUNCTION users_create (VARCHAR, VARCHAR);
+  DROP TRIGGER functions ON users;
+  DROP FUNCTION users_functions ();
+  DROP VIEW users;
+  DROP TABLE user_versions;
+  DROP TABLE user_statics;
+  DROP SEQUENCE us_id_seq;
+  DROP TABLE auth;

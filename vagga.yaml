@@ -110,7 +110,7 @@ commands:
       trap "su postgres -c 'pg_ctl -w stop'; trap - INT; kill -INT $$" INT
 
       su postgres -c 'pg_ctl init'
-      su postgres -c 'pg_ctl start -wo "-F --port=$PG_PORT -k /tmp"'
+      su postgres -c 'pg_ctl start -l /dev/null -wo "-F --port=$PG_PORT -k /tmp"'
 
       su postgres -c "psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASS';\""
       su postgres -c 'createdb -h 127.0.0.1 -p $PG_PORT -O $PG_USER $PG_DB'
@@ -137,7 +137,7 @@ commands:
         run: |
           touch /locks/.dbstart.lock
           while [ -f /locks/.dbstart.lock ]; do sleep 0.2; done
-          alembic upgrade head
+          migro checkout head
           rm -f /locks/.dbmigrate.lock
           while sleep 86400; do :; done
 
@@ -155,7 +155,7 @@ commands:
         run: |
           touch /locks/.dbstart.lock
           while [ -f /locks/.dbstart.lock ]; do sleep 0.2; done
-          alembic upgrade head
+          migro checkout head
           rm -f /locks/.dbmigrate.lock
           while sleep 86400; do :; done
 

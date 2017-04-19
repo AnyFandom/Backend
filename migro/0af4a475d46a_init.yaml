@@ -1,0 +1,19 @@
+description: Init
+
+revision: 0af4a475d46a
+down_revision: null
+
+upgrade: |
+  CREATE EXTENSION CITEXT;
+  CREATE EXTENSION PGCRYPTO;
+
+  CREATE TABLE admins (
+    PRIMARY KEY (user_id),
+
+    user_id BIGINT NOT NULL
+  );
+
+downgrade: |
+  DROP TABLE admins;
+  DROP EXTENSION PGCRYPTO;
+  DROP EXTENSION CITEXT;
