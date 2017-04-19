@@ -4,7 +4,7 @@
 from .validators import JsonValidator, Field, string
 
 
-patch = JsonValidator(
+update = JsonValidator(
     Field(False, 'description', string, mn=0, mx=65535),
     Field(False, 'avatar', string, mn=0, mx=64)
 )

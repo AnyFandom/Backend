@@ -38,7 +38,7 @@ class User(BaseView):
         return JsonResponse(await _id_u(self.request))
 
     async def patch(self):
-        body = await v.get_body(self.request, v.users.patch)
+        body = await v.get_body(self.request, v.users.update)
         await (await _id_u(self.request)).update(body)
 
         return JsonResponse()

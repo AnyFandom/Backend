@@ -6,7 +6,7 @@ from typing import Union, Tuple
 import asyncpg
 
 from .models_base import Obj
-from ..web.exceptions import Forbidden, ObjectNotFound, AlreadyModer
+from ..web.exceptions import Forbidden, ObjectNotFound, AlreadyModer, NotModer
 
 
 class User(Obj):
@@ -66,7 +66,7 @@ class User(Obj):
 
         await self._conn.execute(
             self._sqls['update'], self._uid, self._data['id'],
-            fields.get('description'), fields.get('avatar'))
+            fields['description'], fields['avatar'])
 
     async def history(self) -> Tuple['User', ...]:
 
@@ -102,7 +102,14 @@ class Fandom(Obj):
             "INSERT INTO fandom_moders (user_id, target_id, edit_f, "
             "manage_f, ban_f, create_b, edit_b, edit_p, edit_c)"
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-        )
+        ),
+
+        moders_update=(
+            "UPDATE fandom_moders SET target_id=$2, edit_f=$3, "
+            "manage_f=$4, ban_f=$5, create_b=$6, edit_b=$7, edit_p=$8, "
+            "edit_c=$9 WHERE user_id=$1 RETURNING TRUE;"
+        ),
+
     )
 
     @staticmethod
@@ -148,9 +155,9 @@ class Fandom(Obj):
             raise Forbidden
 
         new_id = await conn.fetchval(
-            cls._sqls['insert'], user_id, fields.get('url'),
-            fields.get('title'), fields.get('description'),
-            fields.get('avatar'))
+            cls._sqls['insert'], user_id, fields['url'],
+            fields['title'], fields['description'],
+            fields['avatar'])
 
         return new_id
 
@@ -166,8 +173,8 @@ class Fandom(Obj):
 
         await self._conn.execute(
             self._sqls['update'], self._uid, self._data['id'],
-            fields.get('title'), fields.get('description'),
-            fields.get('avatar'))
+            fields['title'], fields['description'],
+            fields['avatar'])
 
     async def history(self) -> Tuple['Fandom', ...]:
 
@@ -207,10 +214,31 @@ class Fandom(Obj):
 
         try:
             await self._conn.execute(
-                self._sqls['moders_insert'], fields['user_id'],
-                self._data['id'], fields['edit_f'], fields['manage_f'],
-                fields['ban_f'], fields['create_b'], fields['edit_b'],
+                self._sqls['moders_insert'],
+
+                fields['user_id'], self._data['id'],
+                fields['edit_f'], fields['manage_f'], fields['ban_f'],
+                fields['create_b'], fields['edit_b'],
                 fields['edit_p'], fields['edit_c']
             )
         except asyncpg.exceptions.UniqueViolationError:
             raise AlreadyModer
+
+    async def moders_update(self, fields: dict):
+
+        if (
+            not await self.check_fandom_perm(
+                self._conn, self._uid, self._data['id'], 'manage_f') and
+            not await self.check_admin(self._conn, self._uid)
+        ):
+            raise Forbidden
+
+        if not await self._conn.fetchval(
+            self._sqls['moders_update'],
+
+            fields['user_id'], self._data['id'],
+            fields['edit_f'], fields['manage_f'], fields['ban_f'],
+            fields['create_b'], fields['edit_b'],
+            fields['edit_p'], fields['edit_c']
+        ):
+            raise NotModer

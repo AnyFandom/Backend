@@ -92,7 +92,12 @@ class FandomUrlAlreadyTaken(FailException):
 
 class AlreadyModer(FailException):
     status_code = 409
-    description = 'This user is already moderator of this fandom'
+    description = 'This user is already moderator'
+
+
+class NotModer(FailException):
+    status_code = 400
+    description = 'This user is not moderator'
 
 
 class ExpectationFailed(FailException):

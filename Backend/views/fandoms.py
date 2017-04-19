@@ -44,7 +44,7 @@ class Fandom(BaseView):
         return JsonResponse(await _id_u(self.request))
 
     async def patch(self):
-        body = await v.get_body(self.request, v.fandoms.patch)
+        body = await v.get_body(self.request, v.fandoms.update)
         await (await _id_u(self.request)).update(body)
 
         return JsonResponse()
@@ -69,3 +69,8 @@ class FandomModers(BaseView):
 
         return JsonResponse(status_code=201)
 
+    async def patch(self):
+        body = await v.get_body(self.request, v.fandoms.moders_update)
+        await (await _id_u(self.request)).moders_update(body)
+
+        return JsonResponse()

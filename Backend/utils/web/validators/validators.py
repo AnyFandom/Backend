@@ -75,9 +75,6 @@ class JsonValidator:
                 errs.append('%s: %s' % (field.name, str(exc)))
                 continue
 
-            if parsed is None:
-                continue
-
             resp[field.name] = parsed
 
         if errs:
