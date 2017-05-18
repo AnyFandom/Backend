@@ -5,7 +5,8 @@ from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
 from ..utils.web.exceptions import ObjectNotFound
 
-__all__ = ('FandomList', 'Fandom', 'FandomHistory', 'FandomModers')
+__all__ = ('FandomList', 'Fandom', 'FandomHistory',
+           'FandomModerList', 'FandomModer')
 
 
 async def _id_u(request) -> m.Fandom:
@@ -57,7 +58,7 @@ class FandomHistory(BaseView):
         return JsonResponse(resp)
 
 
-class FandomModers(BaseView):
+class FandomModerList(BaseView):
     async def get(self):
         resp = await (await _id_u(self.request)).moders_select()
 
@@ -69,14 +70,26 @@ class FandomModers(BaseView):
 
         return JsonResponse(status_code=201)
 
+
+class FandomModer(BaseView):
+    async def get(self):
+        try:
+            resp = (await (await _id_u(self.request)).moders_select(
+                self.request.match_info['arg2']))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
+        return JsonResponse(resp)
+
     async def patch(self):
         body = await v.get_body(self.request, v.fandoms.moders_update)
-        await (await _id_u(self.request)).moders_update(body)
+        await (await (await _id_u(self.request)).moders_select(
+            self.request.match_info['arg2']))[0].update(body)
 
         return JsonResponse()
 
     async def delete(self):
-        body = await v.get_body(self.request, v.fandoms.moders_delete)
-        await (await _id_u(self.request)).moders_delete(body)
+        await (await (await _id_u(self.request)).moders_select(
+            self.request.match_info['arg2']))[0].delete()
 
         return JsonResponse()

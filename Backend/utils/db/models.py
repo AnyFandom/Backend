@@ -82,38 +82,125 @@ class User(Obj):
         return tuple(self.__class__(x) for x in resp)
 
 
-class Fandom(Obj):
-    _sqls = dict(
-        insert="SELECT fandoms_create($1, $2, $3, $4, $5)",
-        select="SELECT * FROM fandoms %s ORDER BY id",
-        update="UPDATE fandoms SET edited_by=$1,"
-               "title=$3, description=$4, avatar=$5 WHERE id=$2",
-        history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC",
+class FandomModer(User):
+    _meta = ('fandom_id', 'edit_f', 'manage_f', 'ban_f',
+             'create_b', 'edit_b', 'edit_p', 'edit_c')
 
-        moders_select=(
-            "SELECT u.*, fm.edit_f, fm.manage_f, fm.ban_f, "
-            "fm.create_b, fm.edit_b, fm.edit_p, fm.edit_c "
+    _sqls = dict(
+        # args: fandom_id
+        select=(
+            "SELECT u.*, fm.target_id AS fandom_id, fm.edit_f, fm.manage_f, "
+            "fm.ban_f, fm.create_b, fm.edit_b, fm.edit_p, fm.edit_c "
             "FROM fandom_moders AS fm "
             "INNER JOIN users AS u ON fm.user_id=u.id "
-            "WHERE fm.target_id=$1"
+            "WHERE fm.target_id=$1 %s ORDER BY u.id ASC"
         ),
 
-        moders_insert=(
+        # args: user_id, fandom_id, edit_f, manage_f, ban_f, create_b, edit_b,
+        #       edit_p, edit_c
+        insert=(
             "INSERT INTO fandom_moders (user_id, target_id, edit_f, "
             "manage_f, ban_f, create_b, edit_b, edit_p, edit_c)"
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
         ),
 
-        moders_update=(
+        # args: user_id, fandom_id, edit_f, manage_F, ban_f, create_b, edit_b,
+        #       edit_p, edit_c
+        update=(
             "UPDATE fandom_moders SET target_id=$2, edit_f=$3, "
             "manage_f=$4, ban_f=$5, create_b=$6, edit_b=$7, edit_p=$8, "
-            "edit_c=$9 WHERE user_id=$1 RETURNING TRUE;"
+            "edit_c=$9 WHERE user_id=$1;"
         ),
 
-        moders_delete=(
+        # args: user_id, fandom_id
+        delete=(
             "DELETE FROM fandom_moders "
-            "WHERE user_id=$1 AND target_id=$2 RETURNING TRUE"
+            "WHERE user_id=$1 AND target_id=$2"
         )
+    )
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    async def select(cls, conn: asyncpg.connection.Connection, fandom_id: int,
+                     user_id: int, *target_ids: Union[int, str]
+                     ) -> Tuple['FandomModer', ...]:
+
+        if target_ids:
+            resp = await conn.fetch(
+                cls._sqls['select'] % 'AND fm.user_id = ANY($2::BIGINT[])',
+                fandom_id, tuple(map(int, target_ids)))
+        else:
+            resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
+
+        return tuple(cls(x, conn, user_id, cls._meta) for x in resp)
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
+                     user_id: int, fields: dict):
+
+        if (
+            not await cls.check_fandom_perm(
+                conn, user_id, fandom_id, 'manage_f') and
+            not await cls.check_admin(conn, user_id)
+        ):
+            raise Forbidden
+
+        if not await User.select(conn, user_id, fields['user_id']):
+            raise ObjectNotFound
+
+        try:
+            await conn.execute(
+                cls._sqls['insert'],
+
+                fields['user_id'], user_id,
+                fields['edit_f'], fields['manage_f'], fields['ban_f'],
+                fields['create_b'], fields['edit_b'],
+                fields['edit_p'], fields['edit_c']
+            )
+        except asyncpg.exceptions.UniqueViolationError:
+            raise AlreadyModer
+
+    async def update(self, fields: dict):
+
+        if (
+            not await self.check_fandom_perm(
+                self._conn, self._uid, self._data['id'], 'manage_f') and
+            not await self.check_admin(self._conn, self._uid)
+        ):
+            raise Forbidden
+
+        await self._conn.execute(
+            self._sqls['update'],
+
+            self._data['id'], self._data['meta']['fandom_id'],
+            fields['edit_f'], fields['manage_f'], fields['ban_f'],
+            fields['create_b'], fields['edit_b'],
+            fields['edit_p'], fields['edit_c'])
+
+    async def delete(self):
+
+        if (
+            not await self.check_fandom_perm(
+                self._conn, self._uid, self._data['id'], 'manage_f') and
+            not await self.check_admin(self._conn, self._uid)
+        ):
+            raise Forbidden
+
+        await self._conn.execute(
+            self._sqls['delete'],
+
+            self._data['id'], self._data['meta']['fandom_id']
+        )
+
+
+class Fandom(Obj):
+    _sqls = dict(
+        select="SELECT * FROM fandoms %s ORDER BY id",
+        insert="SELECT fandoms_create($1, $2, $3, $4, $5)",
+        update="UPDATE fandoms SET edited_by=$1,"
+               "title=$3, description=$4, avatar=$5 WHERE id=$2",
+        history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC",
     )
 
     @staticmethod
@@ -194,69 +281,13 @@ class Fandom(Obj):
 
         return tuple(self.__class__(x) for x in resp)
 
-    async def moders_select(self) -> Tuple[User, ...]:
+    async def moders_select(self, *target_ids: Union[int, str]
+                            ) -> Tuple[FandomModer, ...]:
 
-        resp = await self._conn.fetch(
-            self._sqls['moders_select'], self._data['id'])
-
-        meta = ('edit_f', 'manage_f', 'ban_f',
-                'create_b', 'edit_b', 'edit_p', 'edit_c')
-
-        return tuple(User(x, self._conn, self._uid, meta) for x in resp)
+        return await FandomModer.select(
+            self._conn, self._data['id'], self._uid, *target_ids)
 
     async def moders_insert(self, fields: dict):
 
-        if (
-            not await self.check_fandom_perm(
-                self._conn, self._uid, self._data['id'], 'manage_f') and
-            not await self.check_admin(self._conn, self._uid)
-        ):
-            raise Forbidden
-
-        if not await User.select(self._conn, self._uid, fields['user_id']):
-            raise ObjectNotFound
-
-        try:
-            await self._conn.execute(
-                self._sqls['moders_insert'],
-
-                fields['user_id'], self._data['id'],
-                fields['edit_f'], fields['manage_f'], fields['ban_f'],
-                fields['create_b'], fields['edit_b'],
-                fields['edit_p'], fields['edit_c']
-            )
-        except asyncpg.exceptions.UniqueViolationError:
-            raise AlreadyModer
-
-    async def moders_update(self, fields: dict):
-
-        if (
-            not await self.check_fandom_perm(
-                self._conn, self._uid, self._data['id'], 'manage_f') and
-            not await self.check_admin(self._conn, self._uid)
-        ):
-            raise Forbidden
-
-        if not await self._conn.fetchval(
-            self._sqls['moders_update'],
-
-            fields['user_id'], self._data['id'],
-            fields['edit_f'], fields['manage_f'], fields['ban_f'],
-            fields['create_b'], fields['edit_b'],
-            fields['edit_p'], fields['edit_c']
-        ):
-            raise NotModer
-
-    async def moders_delete(self, fields: dict):
-
-        if (
-            not await self.check_fandom_perm(
-                self._conn, self._uid, self._data['id'], 'manage_f') and
-            not await self.check_admin(self._conn, self._uid)
-        ):
-            raise Forbidden
-
-        if not await self._conn.fetchval(
-            self._sqls['moders_delete'], fields['user_id'], self._data['id']
-        ):
-            raise NotModer
+        await FandomModer.insert(
+            self._conn, self._data['id'], self._uid, fields)

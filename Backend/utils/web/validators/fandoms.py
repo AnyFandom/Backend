@@ -29,7 +29,6 @@ moders_insert = JsonValidator(
 )
 
 moders_update = JsonValidator(
-    Field(True, 'user_id', integer),
     Field(False, 'edit_f', boolean),
     Field(False, 'manage_f', boolean),
     Field(False, 'ban_f', boolean),
@@ -37,8 +36,4 @@ moders_update = JsonValidator(
     Field(False, 'edit_b', boolean),
     Field(False, 'edit_p', boolean),
     Field(False, 'edit_c', boolean),
-)
-
-moders_delete = JsonValidator(
-    Field(True, 'user_id', integer)
 )
