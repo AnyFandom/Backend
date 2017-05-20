@@ -26,7 +26,6 @@ upgrade: |
     target_id BIGINT      NOT NULL,
     set_by    BIGINT      NOT NULL,
     reason    VARCHAR(32) NOT NULL,
-    until     TIMESTAMPTZ NOT NULL
   );
 
   CREATE TABLE fandom_statics (
