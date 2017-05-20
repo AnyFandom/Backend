@@ -4,8 +4,6 @@
 from collections import Mapping
 from abc import ABCMeta, abstractmethod
 
-import asyncpg
-
 
 class Obj(Mapping, metaclass=ABCMeta):
     def __init__(self, data, conn=None, user_id=None, meta=None):
@@ -29,24 +27,6 @@ class Obj(Mapping, metaclass=ABCMeta):
 
     def __repr__(self):
         return '<%s id=%i>' % (type(self).__name__, self._data['id'])
-
-    @staticmethod
-    async def check_admin(conn: asyncpg.connection.Connection,
-                          user_id: int) -> bool:
-
-        return await conn.fetchval(
-            'SELECT EXISTS (SELECT 1 FROM admins WHERE user_id=$1)', user_id)
-
-    @staticmethod
-    async def check_fandom_perm(conn: asyncpg.connection.Connection,
-                                user_id: int, target_id: int,
-                                perm: str) -> bool:
-
-        return await conn.fetchval(
-            'SELECT EXISTS (SELECT 1 FROM fandom_moders '
-            'WHERE user_id=$1 AND target_id=$2 AND %s=TRUE)' % perm,
-            user_id, target_id
-        )
 
     @staticmethod
     @abstractmethod
