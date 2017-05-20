@@ -56,6 +56,9 @@ containers:
       - !Install [nginx]
     volumes:
       <<: *volumes
+      /var/tmp: !Tmpfs
+        subdirs:
+          nginx:
       /var/lib/nginx: !Tmpfs
         subdirs:
           logs:
