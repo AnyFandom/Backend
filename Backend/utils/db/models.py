@@ -12,8 +12,12 @@ from ..web.exceptions import Forbidden, ObjectNotFound, AlreadyModer, NotModer
 class User(Obj):
     _sqls = dict(
         select="SELECT * FROM users %s ORDER BY id ASC",
+
+        # args: edited_by, user_id, description, avatar,
         update="UPDATE users SET edited_by=$1, "
                "description=$3, avatar=$4 WHERE id=$2",
+
+        # args: user_id
         history="SELECT * FROM users_history ($1) ORDER BY id, edited_at ASC",
     )
 
@@ -88,35 +92,26 @@ class FandomModer(User):
 
     _sqls = dict(
         # args: fandom_id
-        select=(
-            "SELECT u.*, fm.target_id AS fandom_id, fm.edit_f, fm.manage_f, "
-            "fm.ban_f, fm.create_b, fm.edit_b, fm.edit_p, fm.edit_c "
-            "FROM fandom_moders AS fm "
-            "INNER JOIN users AS u ON fm.user_id=u.id "
-            "WHERE fm.target_id=$1 %s ORDER BY u.id ASC"
-        ),
+        select="SELECT u.*, fm.target_id AS fandom_id, fm.edit_f, fm.manage_f,"
+               "fm.ban_f, fm.create_b, fm.edit_b, fm.edit_p, fm.edit_c "
+               "FROM fandom_moders AS fm "
+               "INNER JOIN users AS u ON fm.user_id=u.id "
+               "WHERE fm.target_id=$1 %s ORDER BY u.id ASC",
 
         # args: user_id, fandom_id, edit_f, manage_f, ban_f, create_b, edit_b,
         #       edit_p, edit_c
-        insert=(
-            "INSERT INTO fandom_moders (user_id, target_id, edit_f, "
-            "manage_f, ban_f, create_b, edit_b, edit_p, edit_c)"
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
-        ),
+        insert="INSERT INTO fandom_moders (user_id, target_id, edit_f, "
+               "manage_f, ban_f, create_b, edit_b, edit_p, edit_c)"
+               "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 
         # args: user_id, fandom_id, edit_f, manage_F, ban_f, create_b, edit_b,
         #       edit_p, edit_c
-        update=(
-            "UPDATE fandom_moders SET target_id=$2, edit_f=$3, "
-            "manage_f=$4, ban_f=$5, create_b=$6, edit_b=$7, edit_p=$8, "
-            "edit_c=$9 WHERE user_id=$1;"
-        ),
+        update="UPDATE fandom_moders SET target_id=$2, edit_f=$3, "
+               "manage_f=$4, ban_f=$5, create_b=$6, edit_b=$7, edit_p=$8, "
+               "edit_c=$9 WHERE user_id=$1;",
 
         # args: user_id, fandom_id
-        delete=(
-            "DELETE FROM fandom_moders "
-            "WHERE user_id=$1 AND target_id=$2"
-        )
+        delete="DELETE FROM fandom_moders WHERE user_id=$1 AND target_id=$2"
     )
 
     # noinspection PyMethodOverriding
@@ -139,6 +134,7 @@ class FandomModer(User):
     async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
                      user_id: int, fields: dict):
 
+        # Проверка
         if (
             not await cls.check_fandom_perm(
                 conn, user_id, fandom_id, 'manage_f') and
@@ -147,6 +143,7 @@ class FandomModer(User):
             raise Forbidden
 
         if not await User.select(conn, user_id, fields['user_id']):
+        # Существует ли юзер
             raise ObjectNotFound
 
         try:
@@ -163,6 +160,7 @@ class FandomModer(User):
 
     async def update(self, fields: dict):
 
+        # Проверка
         if (
             not await self.check_fandom_perm(
                 self._conn, self._uid, self._data['id'], 'manage_f') and
@@ -180,6 +178,7 @@ class FandomModer(User):
 
     async def delete(self):
 
+        # Проверка
         if (
             not await self.check_fandom_perm(
                 self._conn, self._uid, self._data['id'], 'manage_f') and
@@ -197,10 +196,16 @@ class FandomModer(User):
 class Fandom(Obj):
     _sqls = dict(
         select="SELECT * FROM fandoms %s ORDER BY id",
+
+        # args: user_id, url, title, description, avatar
         insert="SELECT fandoms_create($1, $2, $3, $4, $5)",
+
+        # args: edited_by, fandom_id, title, description, avatar
         update="UPDATE fandoms SET edited_by=$1,"
                "title=$3, description=$4, avatar=$5 WHERE id=$2",
-        history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC",
+
+        # args: fandom_id
+        history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC"
     )
 
     @staticmethod
@@ -280,6 +285,8 @@ class Fandom(Obj):
         resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
 
         return tuple(self.__class__(x) for x in resp)
+
+    # Moders
 
     async def moders_select(self, *target_ids: Union[int, str]
                             ) -> Tuple[FandomModer, ...]:

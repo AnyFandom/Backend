@@ -40,7 +40,7 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{arg:' + _arg + '}', views.Fandom)
     url('*', '/fandoms/{arg:' + _arg + '}/history', views.FandomHistory)
     url('*', '/fandoms/{arg:' + _arg + '}/moders', views.FandomModerList)
-    url('*', '/fandoms/{arg:' + _arg + '}/moders/{arg2: \w+}',
+    url('*', '/fandoms/{arg:' + _arg + '}/moders/{arg2:\w+}',
         views.FandomModer)
 
     if bool(int(config['test'])):
