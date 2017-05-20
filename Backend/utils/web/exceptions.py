@@ -95,9 +95,19 @@ class AlreadyModer(FailException):
     description = 'This user is already moderator'
 
 
-class NotModer(FailException):
+class AlreadyBanned(FailException):
+    status_code = 409
+    description = 'This user is already banned'
+
+
+class UserIsBanned(FailException):
     status_code = 400
-    description = 'This user is not moderator'
+    description = 'User that you are trying to add as moderator is banned.'
+
+
+class UserIsModer(FailException):
+    status_code = 400
+    description = 'User that you are trying ban is moderator.'
 
 
 class ExpectationFailed(FailException):

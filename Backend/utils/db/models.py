@@ -6,7 +6,8 @@ from typing import Union, Tuple
 import asyncpg
 
 from .models_base import Obj
-from ..web.exceptions import Forbidden, ObjectNotFound, AlreadyModer, NotModer
+from ..web.exceptions import (Forbidden, ObjectNotFound, AlreadyModer,
+                              AlreadyBanned, UserIsBanned, UserIsModer)
 
 
 class User(Obj):
@@ -178,6 +179,10 @@ class FandomModer(User):
         if not await User.check_exists(conn, fields['user_id']):
             raise ObjectNotFound
 
+        # А не забанен ли он?
+        if await FandomBanned.check_exists(conn, fandom_id, fields['user_id']):
+            raise UserIsBanned
+
         try:
             await conn.execute(
                 cls._sqls['insert'],
@@ -214,6 +219,101 @@ class FandomModer(User):
         if (
             not await FandomModer.check_exists(
                 self._conn, self._uid, self._data['id'], 'manage_f') and
+            not await User.check_admin(self._conn, self._uid)
+        ):
+            raise Forbidden
+
+        await self._conn.execute(
+            self._sqls['delete'],
+
+            self._data['id'], self._data['meta']['fandom_id']
+        )
+
+
+class FandomBanned(User):
+    _meta = ('fandom_id', 'set_by', 'reason')
+
+    _sqls = dict(
+        # args: fandom_id
+        select="SELECT u.*, fb.target_id as fandom_id, fb.set_by, fb.reason "
+               "FROM fandom_bans AS fb "
+               "INNER JOIN users AS u ON fb.user_id=u.id "
+               "WHERE fb.target_id=$1 %s ORDER BY u.id ASC",
+
+        # args: user_id, fandom_id, set_by, reason
+        insert="INSERT INTO fandom_bans (user_id, target_id, set_by, reason) "
+               "VALUES ($1, $2, $3, $4);",
+
+        # args: user_id, fandom_id
+        delete="DELETE FROM fandom_bans WHERE user_id=$1 AND target_id=$2",
+
+        # args: user_id, fandom_id
+        check_exists="SELECT EXISTS (SELECT 1 FROM fandom_bans "
+                     "WHERE user_id=$1 AND target_id=$2"
+    )
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    async def check_exists(cls, conn: asyncpg.connection.Connection,
+                           user_id: int, fandom_id: int):
+
+        return await conn.fetchval(
+            cls._sqls['check_exists'], user_id, fandom_id)
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    async def select(cls, conn: asyncpg.connection.Connection, fandom_id: int,
+                     user_id: int, *target_ids: Union[int, str]
+                     ) -> Tuple['FandomBanned', ...]:
+
+        if target_ids:
+            resp = await conn.fetch(
+                cls._sqls['select'] % 'AND fb.user_id = ANY($2::BIGINT[])',
+                fandom_id, tuple(map(int, target_ids)))
+        else:
+            resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
+
+        return tuple(cls(x, conn, user_id, cls._meta) for x in resp)
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
+                     user_id: int, fields: dict):
+
+        # Проверка
+        if (
+            not await FandomModer.check_exists(
+                conn, user_id, fandom_id, 'ban_f') and
+            not await User.check_admin(conn, user_id)
+        ):
+            raise Forbidden
+
+        # Существует ли юзер
+        if not await User.check_exists(conn, fields['user_id']):
+            raise ObjectNotFound
+
+        # А не модер ли он?
+        if await FandomModer.check_exists(conn, fields['user_id'], fandom_id):
+            raise UserIsModer
+
+        try:
+            await conn.execute(
+                cls._sqls['insert'],
+
+                fields['user_id'], fandom_id,
+                user_id, fields['reason'])
+        except asyncpg.exceptions.UniqueViolationError:
+            raise AlreadyBanned
+
+    async def update(self, fields):
+        pass
+
+    async def delete(self):
+
+        # Проверка
+        if (
+            not await FandomModer.check_exists(
+                self._conn, self._uid, self._data['id'], 'ban_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
@@ -329,4 +429,16 @@ class Fandom(Obj):
     async def moders_insert(self, fields: dict):
 
         await FandomModer.insert(
+            self._conn, self._data['id'], self._uid, fields)
+
+    # Bans
+
+    async def bans_select(self, *target_ids: Union[int, str]
+                          ) -> Tuple[FandomBanned, ...]:
+        return await FandomBanned.select(
+            self._conn, self._data['id'], self._uid, *target_ids)
+
+    async def bans_insert(self, fields: dict):
+
+        await FandomBanned.insert(
             self._conn, self._data['id'], self._uid, fields)

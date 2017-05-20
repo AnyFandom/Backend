@@ -6,7 +6,8 @@ from ..utils.web import BaseView, JsonResponse, validators as v
 from ..utils.web.exceptions import ObjectNotFound
 
 __all__ = ('FandomList', 'Fandom', 'FandomHistory',
-           'FandomModerList', 'FandomModer')
+           'FandomModerList', 'FandomModer',
+           'FandomBansList', 'FandomBans')
 
 
 async def _id_u(request) -> m.Fandom:
@@ -90,6 +91,36 @@ class FandomModer(BaseView):
 
     async def delete(self):
         await (await (await _id_u(self.request)).moders_select(
+            self.request.match_info['arg2']))[0].delete()
+
+        return JsonResponse()
+
+
+class FandomBansList(BaseView):
+    async def get(self):
+        resp = await (await _id_u(self.request)).bans_select()
+
+        return JsonResponse(resp)
+
+    async def post(self):
+        body = await v.get_body(self.request, v.fandoms.bans_insert)
+        await (await _id_u(self.request)).bans_insert(body)
+
+        return JsonResponse(status_code=201)
+
+
+class FandomBans(BaseView):
+    async def get(self):
+        try:
+            resp = (await (await _id_u(self.request)).bans_select(
+                self.request.match_info['arg2']))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
+        return JsonResponse(resp)
+
+    async def delete(self):
+        await (await (await _id_u(self.request)).bans_select(
             self.request.match_info['arg2']))[0].delete()
 
         return JsonResponse()
