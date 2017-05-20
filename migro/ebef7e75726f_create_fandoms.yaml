@@ -25,7 +25,7 @@ upgrade: |
     user_id   BIGINT      NOT NULL,
     target_id BIGINT      NOT NULL,
     set_by    BIGINT      NOT NULL,
-    reason    VARCHAR(32) NOT NULL,
+    reason    VARCHAR(32) NOT NULL
   );
 
   CREATE TABLE fandom_statics (
