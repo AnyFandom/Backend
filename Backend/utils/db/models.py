@@ -144,7 +144,7 @@ class FandomModer(User):
                            perm: str=None) -> bool:
 
         return await conn.fetchval(
-            cls._sqls['check_exists'] % ('AND %s=TRUE', perm) if perm else '',
+            cls._sqls['check_exists'] % ('AND %s=TRUE' % perm) if perm else '',
             user_id, fandom_id)
 
     # noinspection PyMethodOverriding
