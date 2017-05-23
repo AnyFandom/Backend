@@ -48,6 +48,7 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     if bool(int(config['test'])):
         print('RUNNING IN TEST MODE')
         url('POST', '/clear_db', views.clear_db)
+        url('POST', '/execute', views.execute)
         app.middlewares.insert(0, middlewares.timeit_middleware)
 
     config['access_key'] = config['access_key'].encode('utf-8')
