@@ -86,7 +86,7 @@ upgrade: |
         NEW.description = COALESCE(NEW.description, OLD.description);
         NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
 
-        IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore() THEN
+        IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore THEN
           RETURN NULL;
         END IF;
 
