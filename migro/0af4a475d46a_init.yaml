@@ -4,6 +4,7 @@ revision: 0af4a475d46a
 down_revision: null
 
 upgrade: |
+  CREATE EXTENSION HSTORE;
   CREATE EXTENSION CITEXT;
   CREATE EXTENSION PGCRYPTO;
 
