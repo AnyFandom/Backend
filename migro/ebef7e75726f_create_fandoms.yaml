@@ -18,7 +18,6 @@ upgrade: |
     edit_c    BOOL   NOT NULL
   );
 
-  CREATE SEQUENCE fs_id_seq;
   CREATE TABLE fandom_bans (
     PRIMARY KEY (user_id, target_id), 
     
@@ -28,6 +27,7 @@ upgrade: |
     reason    VARCHAR(32) NOT NULL
   );
 
+  CREATE SEQUENCE fs_id_seq;
   CREATE TABLE fandom_statics (
     PRIMARY KEY (id),
     UNIQUE (url),
@@ -86,11 +86,7 @@ upgrade: |
         NEW.description = COALESCE(NEW.description, OLD.description);
         NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
 
-        IF
-          NEW.description = OLD.description AND
-          NEW.avatar = OLD.avatar AND
-          NEW.title = OLD.title
-        THEN
+        IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore() THEN
           RETURN NULL;
         END IF;
 
