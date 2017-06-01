@@ -28,16 +28,7 @@ class User(Obj):
         check_admin="SELECT EXISTS (SELECT 1 FROM admins WHERE user_id=$1)"
     )
 
-    @staticmethod
-    def _map(data, meta) -> dict:
-        resp = dict(type='users', id=data.pop('id'))
-
-        if meta is not None:
-            resp['meta'] = {x: data.pop(x) for x in meta if x in data}
-
-        resp['attributes'] = data
-
-        return resp
+    _type = 'users'
 
     @classmethod
     async def check_exists(cls, conn: asyncpg.connection.Connection,
@@ -105,7 +96,7 @@ class User(Obj):
         return tuple(self.__class__(x) for x in resp)
 
 
-class FandomModer(User):
+class FandomModer(Obj):
     _meta = ('fandom_id', 'edit_f', 'manage_f', 'ban_f',
              'create_b', 'edit_b', 'edit_p', 'edit_c')
 
@@ -127,7 +118,7 @@ class FandomModer(User):
         #       edit_p, edit_c
         update="UPDATE fandom_moders SET target_id=$2, edit_f=$3, "
                "manage_f=$4, ban_f=$5, create_b=$6, edit_b=$7, edit_p=$8, "
-               "edit_c=$9 WHERE user_id=$1;",
+               "edit_c=$9 WHERE user_id=$1",
 
         # args: user_id, fandom_id
         delete="DELETE FROM fandom_moders WHERE user_id=$1 AND target_id=$2",
@@ -136,6 +127,8 @@ class FandomModer(User):
         check_exists="SELECT EXISTS (SELECT 1 FROM fandom_moders "
                      "WHERE user_id=$1 AND target_id=$2 %s)"
     )
+
+    _type = 'users'
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -230,7 +223,7 @@ class FandomModer(User):
         )
 
 
-class FandomBanned(User):
+class FandomBanned(Obj):
     _meta = ('fandom_id', 'set_by', 'reason')
 
     _sqls = dict(
@@ -242,7 +235,7 @@ class FandomBanned(User):
 
         # args: user_id, fandom_id, set_by, reason
         insert="INSERT INTO fandom_bans (user_id, target_id, set_by, reason) "
-               "VALUES ($1, $2, $3, $4);",
+               "VALUES ($1, $2, $3, $4)",
 
         # args: user_id, fandom_id
         delete="DELETE FROM fandom_bans WHERE user_id=$1 AND target_id=$2",
@@ -251,6 +244,8 @@ class FandomBanned(User):
         check_exists="SELECT EXISTS (SELECT 1 FROM fandom_bans "
                      "WHERE user_id=$1 AND target_id=$2"
     )
+
+    _type = 'users'
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -340,16 +335,7 @@ class Fandom(Obj):
         history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC"
     )
 
-    @staticmethod
-    def _map(data, meta) -> dict:
-        resp = dict(type='fandoms', id=data.pop('id'))
-
-        if meta is not None:
-            resp['meta'] = {x: data.pop(x) for x in meta if x in data}
-
-        resp['attributes'] = data
-
-        return resp
+    _type = 'fandoms'
 
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection,

@@ -28,10 +28,18 @@ class Obj(Mapping, metaclass=ABCMeta):
     def __repr__(self):
         return '<%s id=%i>' % (type(self).__name__, self._data['id'])
 
-    @staticmethod
-    @abstractmethod
-    def _map(data, meta):
-        pass
+    _type = ''
+
+    @classmethod
+    def _map(cls, data, meta) -> dict:
+        resp = dict(type=cls._type, id=data.pop('id'))
+
+        if meta is not None:
+            resp['meta'] = {x: data.pop(x) for x in meta if x in data}
+
+        resp['attributes'] = data
+
+        return resp
 
     @classmethod
     @abstractmethod
