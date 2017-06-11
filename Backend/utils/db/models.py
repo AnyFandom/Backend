@@ -149,7 +149,6 @@ class FandomModer(Obj):
 
     _type = 'users'
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def check_exists(cls, conn: asyncpg.connection.Connection,
                            user_id: int, fandom_id: int,
@@ -165,10 +164,13 @@ class FandomModer(Obj):
                      user_id: int, *target_ids: Union[int, str]
                      ) -> Tuple['FandomModer', ...]:
 
+        # На вход поданы ID
         if target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % 'AND fm.user_id = ANY($2::BIGINT[])',
                 fandom_id, tuple(map(int, target_ids)))
+
+        # На вход не подано ничего
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
 
@@ -260,7 +262,7 @@ class FandomBanned(Obj):
 
         # args: user_id, fandom_id
         check_exists="SELECT EXISTS (SELECT 1 FROM fandom_bans "
-                     "WHERE user_id=$1 AND target_id=$2"
+                     "WHERE user_id=$1 AND target_id=$2)"
     )
 
     _type = 'users'
@@ -279,10 +281,13 @@ class FandomBanned(Obj):
                      user_id: int, *target_ids: Union[int, str]
                      ) -> Tuple['FandomBanned', ...]:
 
+        # На вход поданы ID
         if target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % 'AND fb.user_id = ANY($2::BIGINT[])',
                 fandom_id, tuple(map(int, target_ids)))
+
+        # На вход не подано ничего
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
 
