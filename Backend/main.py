@@ -33,17 +33,18 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('POST', '/auth/reset', views.reset)
 
     url('*', '/users', views.UserList)
-    url('*', '/users/{arg:' + _arg + '}', views.User)
-    url('*', '/users/{arg:' + _arg + '}/history', views.UserHistory)
+    url('*', '/users/{user:' + _arg + '}', views.User)
+    url('*', '/users/{user:' + _arg + '}/history', views.UserHistory)
 
     url('*', '/fandoms', views.fandoms.FandomList)
-    url('*', '/fandoms/{arg:' + _arg + '}', views.Fandom)
-    url('*', '/fandoms/{arg:' + _arg + '}/history', views.FandomHistory)
-    url('*', '/fandoms/{arg:' + _arg + '}/moders', views.FandomModerList)
-    url('*', '/fandoms/{arg:' + _arg + '}/moders/{arg2:\w+}',
+    url('*', '/fandoms/{fandom:' + _arg + '}', views.Fandom)
+    url('*', '/fandoms/{fandom:' + _arg + '}/history', views.FandomHistory)
+    url('*', '/fandoms/{fandom:' + _arg + '}/moders', views.FandomModerList)
+    url('*', '/fandoms/{fandom:' + _arg + '}/moders/{moder:' + _arg + '}',
         views.FandomModer)
-    url('*', '/fandoms/{arg:' + _arg + '}/bans', views.FandomBansList)
-    url('*', '/fandoms/{arg:' + _arg + '}/bans/{arg2:\w+}', views.FandomBans)
+    url('*', '/fandoms/{fandom:' + _arg + '}/bans', views.FandomBansList)
+    url('*', '/fandoms/{fandom:' + _arg + '}/bans/{banned:' + _arg + '}',
+        views.FandomBans)
 
     if bool(int(config['test'])):
         print('RUNNING IN TEST MODE')

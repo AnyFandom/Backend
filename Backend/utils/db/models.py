@@ -43,6 +43,25 @@ class User(Obj):
         return await conn.fetchval(cls._sqls['check_admin'], user_id)
 
     @classmethod
+    async def id_u(cls, request) -> 'User':
+        conn = request.conn
+        user = request.match_info['user']
+        uid = request.uid
+
+        try:
+            if user == 'current':
+                if uid != 0:
+                    return (await cls.select(conn, uid, uid))[0]
+                else:
+                    raise Forbidden
+            elif user[:2] == 'u/':
+                return (await cls.select(conn, uid, user[2:], u=True))[0]
+            else:
+                return (await cls.select(conn, uid, user))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
+    @classmethod
     async def select(cls, conn: asyncpg.connection.Connection,
                      user_id: int, *target_ids: Union[int, str],
                      u: bool=False) -> Tuple['User', ...]:
@@ -199,9 +218,8 @@ class FandomModer(Obj):
             raise Forbidden
 
         await self._conn.execute(
-            self._sqls['update'],
-
-            self._data['id'], self._data['meta']['fandom_id'],
+            self._sqls['update'], self._data['id'],
+            self._data['meta']['fandom_id'],
             fields['edit_f'], fields['manage_f'], fields['ban_f'],
             fields['create_b'], fields['edit_b'],
             fields['edit_p'], fields['edit_c'])
@@ -338,6 +356,20 @@ class Fandom(Obj):
     _type = 'fandoms'
 
     @classmethod
+    async def id_u(cls, request) -> 'Fandom':
+        conn = request.conn
+        fandom = request.match_info['fandom']
+        uid = request.uid
+
+        try:
+            if fandom[:2] == 'u/':
+                return (await cls.select(conn, uid, fandom[2:], u=True))[0]
+            else:
+                return (await cls.select(conn, uid, fandom))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
+    @classmethod
     async def select(cls, conn: asyncpg.connection.Connection,
                      user_id: int, *target_ids: Union[int, str],
                      u: bool=False) -> Tuple['Fandom', ...]:
@@ -387,8 +419,7 @@ class Fandom(Obj):
 
         await self._conn.execute(
             self._sqls['update'], self._uid, self._data['id'],
-            fields['title'], fields['description'],
-            fields['avatar'])
+            fields['title'], fields['description'], fields['avatar'])
 
     async def history(self) -> Tuple['Fandom', ...]:
 
