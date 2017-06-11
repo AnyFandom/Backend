@@ -1,0 +1,177 @@
+description: Create blogs
+
+revision: 981d60aa2a57
+down_revision: ebef7e75726f
+
+upgrade: |
+  CREATE TABLE blog_moders (
+    PRIMARY KEY (user_id, target_id),
+
+    user_id   BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    edit_b    BOOL   NOT NULL,
+    manage_b  BOOL   NOT NULL,
+    ban_b     BOOL   NOT NULL,
+    create_p  BOOL   NOT NULL,
+    edit_p    BOOL   NOT NULL,
+    edit_c    BOOL   NOT NULL
+  );
+
+  CREATE TABLE blog_bans (
+    PRIMARY KEY (user_id, target_id),
+
+    user_id   BIGINT      NOT NULL,
+    target_id BIGINT      NOT NULL,
+    set_by    BIGINT      NOT NULL,
+    reason    VARCHAR(64) NOT NULL
+  );
+
+  CREATE SEQUENCE bs_id_seq;
+  CREATE TABLE blog_statics (
+    PRIMARY KEY (id),
+    UNIQUE (fandom_id, url),
+
+    id         BIGINT                    NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    owner      BIGINT                    NOT NULL,
+    fandom_id  BIGINT                    NOT NULL,
+    url        CITEXT                    NOT NULL
+  );
+
+  CREATE TABLE blog_versions (
+    PRIMARY KEY (id, edited_at),
+
+    id          BIGINT                    NOT NULL,
+    edited_at   TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by   BIGINT                    NOT NULL,
+    title       VARCHAR(120)              NOT NULL,
+    description TEXT DEFAULT ''           NOT NULL,
+    avatar      VARCHAR(64) DEFAULT ''    NOT NULL
+  );
+
+  CREATE VIEW blogs AS (
+    SELECT
+      bs.id,
+      bs.created_at,
+      bs.fandom_id,
+      bs.owner,
+      bv.edited_at,
+      bv.edited_by,
+      bv.title,
+      bs.url,
+      bv.description,
+      bv.avatar
+    FROM blog_statics AS bs
+    INNER JOIN blog_versions AS bv ON bv.id = bs.id
+      AND bv.edited_at = (
+        SELECT max(bv2.edited_at)
+        FROM blog_versions AS bv2
+        WHERE bv2.id = bs.id
+      )
+  );
+
+  CREATE FUNCTION blogs_functions () RETURNS TRIGGER AS $$
+    BEGIN
+
+      IF TG_OP = 'INSERT' THEN
+
+        INSERT INTO blog_statics (id, created_at, owner, fandom_id, url)
+        VALUES (NEW.id, NEW.created_at, NEW.owner, NEW.fandom_id, NEW.url);
+
+        INSERT INTO blog_versions (id, edited_at, edited_by, title, description, avatar)
+        VALUES (NEW.id, NEW.created_at, NEW.id, NEW.title, NEW.description, NEW.avatar);
+
+        RETURN NEW;
+
+      ELSIF TG_OP = 'UPDATE' THEN
+
+        NEW.title = COALESCE(NEW.title, OLD.title);
+        NEW.description = COALESCE(NEW.description, OLD.description);
+        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+
+        IF hstore(NEW) - hstore(OLD) - ARRAY['edited_at', 'edited_by'] = ''::hstore THEN
+          RETURN NULL;
+        END IF;
+
+        INSERT INTO blog_versions (id, edited_at, edited_by, title, description, avatar)
+        VALUES (OLD.id, now(), NEW.edited_by, NEW.title, NEW.description, NEW.avatar);
+
+        RETURN NEW;
+
+      ELSE
+        RETURN NULL;
+      END IF;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER functions INSTEAD OF INSERT OR UPDATE OR DELETE
+  ON blogs FOR EACH ROW EXECUTE PROCEDURE blogs_functions ();
+
+  CREATE FUNCTION blogs_create (
+    user_id     BIGINT,
+    fandom_id   BIGINT,
+    url         CITEXT,
+    title       VARCHAR(120),
+    description TEXT,
+    avatar      VARCHAR(64)
+  ) RETURNS BIGINT AS $$
+
+      INSERT INTO blogs (id, created_at, url, fandom_id, title, description, avatar, owner)
+      VALUES (nextval('bs_id_seq'), now(), url, fandom_id, title, description, avatar, user_id)
+      RETURNING id;
+
+  $$ LANGUAGE sql;
+
+  CREATE FUNCTION blogs_history (
+    target_id BIGINT
+  ) RETURNS SETOF blogs AS $$
+
+    SELECT
+      bs.id,
+      bs.created_at,
+      bs.fandom_id,
+      bs.owner,
+      bv.edited_at,
+      bv.edited_by,
+      bv.title,
+      bs.url,
+      bv.description,
+      bv.avatar
+    FROM blog_statics AS bs
+    INNER JOIN blog_versions AS bv ON bv.id = bs.id
+    WHERE bs.id = target_id;
+
+  $$ LANGUAGE sql;
+
+  CREATE FUNCTION blog_moders_update () RETURNS TRIGGER AS $$
+    BEGIN
+
+      NEW.edit_b := COALESCE(NEW.edit_b, OLD.edit_b);
+      NEW.manage_b := COALESCE(NEW.manage_b, OLD.manage_b);
+      NEW.ban_b := COALESCE(NEW.ban_b, OLD.ban_b);
+      NEW.create_p := COALESCE(NEW.create_p, OLD.create_p);
+      NEW.edit_p := COALESCE(NEW.edit_p, OLD.edit_p);
+      NEW.edit_c := COALESCE(NEW.edit_c, OLD.edit_c);
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER update BEFORE UPDATE
+  ON blog_moders FOR EACH ROW EXECUTE PROCEDURE blog_moders_update ();
+
+downgrade: |
+  DROP TRIGGER update ON blog_moders;
+  DROP FUNCTION blog_moders_update ();
+  DROP FUNCTION blogs_history (BIGINT);
+  DROP FUNCTION blogs_create (BIGINT, BIGINT, CITEXT, VARCHAR, TEXT, VARCHAR);
+  DROP TRIGGER functions ON blogs;
+  DROP FUNCTION blogs_functions ();
+  DROP VIEW blogs;
+  DROP TABLE blog_versions;
+  DROP TABLE blog_statics;
+  DROP SEQUENCE bs_id_seq;
+  DROP TABLE blog_bans;
+  DROP TABLE blog_moders;
