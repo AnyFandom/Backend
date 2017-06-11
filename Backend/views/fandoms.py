@@ -7,7 +7,7 @@ from ..utils.web.exceptions import ObjectNotFound
 
 __all__ = ('FandomList', 'Fandom', 'FandomHistory',
            'FandomModerList', 'FandomModer',
-           'FandomBansList', 'FandomBans')
+           'FandomBannedList', 'FandomBanned')
 
 
 class FandomList(BaseView):
@@ -40,16 +40,14 @@ class Fandom(BaseView):
 
 class FandomHistory(BaseView):
     async def get(self):
-        resp = await (await m.Fandom.id_u(self.request)).history()
-
-        return JsonResponse(resp)
+        return JsonResponse(
+            await (await m.Fandom.id_u(self.request)).history())
 
 
 class FandomModerList(BaseView):
     async def get(self):
-        resp = await (await m.Fandom.id_u(self.request)).moders_select()
-
-        return JsonResponse(resp)
+        return JsonResponse(
+            await (await m.Fandom.id_u(self.request)).moders_select())
 
     async def post(self):
         body = await v.get_body(self.request, v.fandoms.moders_insert)
@@ -64,12 +62,12 @@ class FandomModerList(BaseView):
 class FandomModer(BaseView):
     async def get(self):
         try:
-            resp = (await (await m.Fandom.id_u(self.request)).moders_select(
-                self.request.match_info['moder']))[0]
+            return JsonResponse(
+                (await (await m.Fandom.id_u(self.request)).moders_select(
+                    self.request.match_info['moder']))[0]
+            )
         except (IndexError, ValueError):
             raise ObjectNotFound
-
-        return JsonResponse(resp)
 
     async def patch(self):
         body = await v.get_body(self.request, v.fandoms.moders_update)
@@ -85,11 +83,10 @@ class FandomModer(BaseView):
         return JsonResponse()
 
 
-class FandomBansList(BaseView):
+class FandomBannedList(BaseView):
     async def get(self):
-        resp = await (await m.Fandom.id_u(self.request)).bans_select()
-
-        return JsonResponse(resp)
+        return JsonResponse(
+            await (await m.Fandom.id_u(self.request)).bans_select())
 
     async def post(self):
         body = await v.get_body(self.request, v.fandoms.bans_insert)
@@ -100,15 +97,16 @@ class FandomBansList(BaseView):
         return JsonResponse(
             {'Location': loc}, status_code=201, headers={'Location': loc})
 
-class FandomBans(BaseView):
+
+class FandomBanned(BaseView):
     async def get(self):
         try:
-            resp = (await (await m.Fandom.id_u(self.request)).bans_select(
-                self.request.match_info['banned']))[0]
+            return JsonResponse(
+                (await (await m.Fandom.id_u(self.request)).bans_select(
+                    self.request.match_info['banned']))[0]
+            )
         except (IndexError, ValueError):
             raise ObjectNotFound
-
-        return JsonResponse(resp)
 
     async def delete(self):
         await (await (await m.Fandom.id_u(self.request)).bans_select(

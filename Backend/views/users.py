@@ -26,6 +26,4 @@ class User(BaseView):
 
 class UserHistory(BaseView):
     async def get(self):
-        resp = await (await m.User.id_u(self.request)).history()
-
-        return JsonResponse(resp)
+        return JsonResponse(await (await m.User.id_u(self.request)).history())
