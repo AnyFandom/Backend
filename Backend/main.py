@@ -45,6 +45,12 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{fandom:' + _arg + '}/bans', views.FandomBannedList)
     url('*', '/fandoms/{fandom:' + _arg + '}/bans/{banned:' + _arg + '}',
         views.FandomBanned)
+    url('*', '/fandoms/{fandom:' + _arg + '}/blogs', views.FandomBlogList)
+    url('*', '/fandoms/{fandom:' + _arg + '}/blogs/{blog:' + _arg + '}',
+        views.FandomBlog)
+
+    url('*', '/blogs', views.BlogList)
+    url('*', '/blogs/{blog:\w+}', views.Blog)
 
     if bool(int(config['test'])):
         print('RUNNING IN TEST MODE')

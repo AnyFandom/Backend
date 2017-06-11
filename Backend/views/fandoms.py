@@ -7,7 +7,8 @@ from ..utils.web.exceptions import ObjectNotFound
 
 __all__ = ('FandomList', 'Fandom', 'FandomHistory',
            'FandomModerList', 'FandomModer',
-           'FandomBannedList', 'FandomBanned')
+           'FandomBannedList', 'FandomBanned',
+           'FandomBlogList', 'FandomBlog')
 
 
 class FandomList(BaseView):
@@ -113,3 +114,23 @@ class FandomBanned(BaseView):
             self.request.match_info['banned']))[0].delete()
 
         return JsonResponse()
+
+
+class FandomBlogList(BaseView):
+    async def get(self):
+        return JsonResponse(
+            await (await m.Fandom.id_u(self.request)).blogs_select())
+
+    async def post(self):
+        body = await v.get_body(self.request, v.blogs.insert)
+        new_id = await (await m.Fandom.id_u(self.request)).blogs_insert(body)
+
+        loc = '/blogs/%i' % new_id
+
+        return JsonResponse(
+            {'Location': loc}, status_code=201, headers={'Location': loc})
+
+
+class FandomBlog(BaseView):
+    async def get(self):
+        return JsonResponse(await m.Blog.id_u(self.request))

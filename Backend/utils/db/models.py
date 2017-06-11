@@ -463,3 +463,108 @@ class Fandom(Obj):
             self._conn, self._data['id'], self._uid, fields)
 
         return self._data['id'], fields['user_id']
+
+    # Blogs
+
+    async def blogs_select(self, *target_ids: Union[int, str], u: bool=False
+                           ) -> Tuple['Blog', ...]:
+        return await Blog.select(
+            self._conn, self._data['id'], self._uid, *target_ids, u=u)
+
+    async def blogs_insert(self, fields: dict) -> int:
+
+        return await Blog.insert(
+            self._conn, self._data['id'], self._uid, fields)
+
+
+class Blog(Obj):
+    _sqls = dict(
+        select="SELECT * FROM blogs %s ORDER BY id",
+
+        # args: user_id, fandom_id, url, title, description, avatar
+        insert="SELECT blogs_create($1, $2, $3, $4, $5, $6)",
+
+        # args: edited_by, blog_id, title, description, avatar
+        update="UPDATE blogs SET edited_by=$1, "
+               "title=$3, description=$4, avatar=$5 WHERE id=$2",
+
+        # args: blog_id
+        delete="DELETE FROM blogs WHERE id=$1"
+    )
+
+    _type = 'blogs'
+
+    @classmethod
+    async def id_u(cls, request) -> 'Blog':
+        conn = request.conn
+        blog = request.match_info['blog']
+        uid = request.uid
+
+        try:
+            if blog[:2] == 'u/':
+                return (await (await Fandom.id_u(request)).blogs_select(
+                    blog[2:], u=True))[0]
+            else:
+                return (await cls.select(conn, 0, uid, blog))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    async def select(cls, conn: asyncpg.connection.Connection, fandom_id: int,
+                     user_id: int, *target_ids: Union[int, str],
+                     u: bool=False) -> Tuple['Blog', ...]:
+
+        # На вход поданы url
+        if u and target_ids:
+            resp = await conn.fetch(
+                cls._sqls['select'] % "WHERE url = ANY($1::CITEXT[]) "
+                                      "AND fandom_id = $2",
+                target_ids, fandom_id)
+
+        # На вход поданы ID
+        elif target_ids:
+            resp = await conn.fetch(
+                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
+                tuple(map(int, target_ids)))
+
+        # На вход не подано ничего
+        else:
+            resp = await conn.fetch(cls._sqls['select'] % '')
+
+        return tuple(cls(x, conn, user_id) for x in resp)
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
+                     user_id: int, fields: dict) -> int:
+
+        # TODO: Больше проверок
+
+        if (
+            await FandomBanned.check_exists(conn, user_id, fandom_id)
+        ):
+            raise Forbidden
+
+        new_id = await conn.fetchval(
+            cls._sqls['insert'], user_id, fandom_id, fields['url'],
+            fields['title'], fields['description'], fields['avatar'])
+
+        return new_id
+
+    async def update(self, fields: dict):
+
+        # Проверка
+        if (
+            self._data['owner'] != self._uid and
+            # TODO: BlogModer.check_exists
+            not await FandomModer.check_exists(
+                self._conn, self._uid, self._data['id'], 'edit_b') and
+            not await User.check_admin(self._conn, self._uid)
+        ):
+            return Forbidden
+
+        await self._conn.execute(
+            self._sqls['update'], self._uid, self._data['id'],
+            fields['title'], fields['description'], fields['avatar'])
+
