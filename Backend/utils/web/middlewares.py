@@ -18,7 +18,8 @@ async def timeit_middleware(app: web.Application, handler):
     async def middleware_handler(request: Request):
         start_time = time.time()
         resp = await handler(request)
-        print(format(time.time() - start_time, '.15f'), ':', request.method, request.rel_url)
+        print(format(time.time() - start_time, '.15f'), ':', request.method,
+              request.rel_url, '->', getattr(resp, 'status_code', resp.status))
 
         return resp
     return middleware_handler
