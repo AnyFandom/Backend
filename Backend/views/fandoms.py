@@ -21,10 +21,10 @@ class FandomList(BaseView):
         new_id = await m.Fandom.insert(
             self.request.conn, self.request.uid, body)
 
+        loc = '/fandoms/%i' % new_id
+
         return JsonResponse(
-            {'Location': '/fandoms/%i' % new_id}, status_code=201,
-            headers={'Location': '/fandoms/%i' % new_id}
-        )
+            {'Location': loc}, status_code=201, headers={'Location': loc})
 
 
 class Fandom(BaseView):
@@ -53,9 +53,12 @@ class FandomModerList(BaseView):
 
     async def post(self):
         body = await v.get_body(self.request, v.fandoms.moders_insert)
-        await (await m.Fandom.id_u(self.request)).moders_insert(body)
+        ids = await (await m.Fandom.id_u(self.request)).moders_insert(body)
 
-        return JsonResponse(status_code=201)
+        loc = '/fandoms/%i/moders/%i' % ids
+
+        return JsonResponse(
+            {'Location': loc}, status_code=201, headers={'Location': loc})
 
 
 class FandomModer(BaseView):
@@ -90,10 +93,12 @@ class FandomBansList(BaseView):
 
     async def post(self):
         body = await v.get_body(self.request, v.fandoms.bans_insert)
-        await (await m.Fandom.id_u(self.request)).bans_insert(body)
+        ids = await (await m.Fandom.id_u(self.request)).bans_insert(body)
 
-        return JsonResponse(status_code=201)
+        loc = '/fandoms/%i/bans/%i' % ids
 
+        return JsonResponse(
+            {'Location': loc}, status_code=201, headers={'Location': loc})
 
 class FandomBans(BaseView):
     async def get(self):

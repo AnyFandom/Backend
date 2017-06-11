@@ -443,10 +443,12 @@ class Fandom(Obj):
         return await FandomModer.select(
             self._conn, self._data['id'], self._uid, *target_ids)
 
-    async def moders_insert(self, fields: dict):
+    async def moders_insert(self, fields: dict) -> Tuple[int, int]:
 
         await FandomModer.insert(
             self._conn, self._data['id'], self._uid, fields)
+
+        return self._data['id'], fields['user_id']
 
     # Bans
 
@@ -455,7 +457,9 @@ class Fandom(Obj):
         return await FandomBanned.select(
             self._conn, self._data['id'], self._uid, *target_ids)
 
-    async def bans_insert(self, fields: dict):
+    async def bans_insert(self, fields: dict) -> Tuple[int, int]:
 
         await FandomBanned.insert(
             self._conn, self._data['id'], self._uid, fields)
+
+        return self._data['id'], fields['user_id']
