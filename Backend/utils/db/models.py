@@ -7,7 +7,8 @@ import asyncpg
 
 from .models_base import Obj
 from ..web.exceptions import (Forbidden, ObjectNotFound, AlreadyModer,
-                              AlreadyBanned, UserIsBanned, UserIsModer)
+                              AlreadyBanned, UserIsBanned, UserIsModer,
+                              FandomUrlAlreadyTaken, BlogUrlAlreadyTaken)
 
 
 class User(Obj):
@@ -405,12 +406,13 @@ class Fandom(Obj):
         if not await User.check_admin(conn, user_id):
             raise Forbidden
 
-        new_id = await conn.fetchval(
-            cls._sqls['insert'], user_id, fields['url'],
-            fields['title'], fields['description'],
-            fields['avatar'])
-
-        return new_id
+        try:
+            return await conn.fetchval(
+                cls._sqls['insert'], user_id, fields['url'],
+                fields['title'], fields['description'],
+                fields['avatar'])
+        except asyncpg.exceptions.UniqueViolationError:
+            raise FandomUrlAlreadyTaken
 
     async def update(self, fields: dict):
 
@@ -553,11 +555,12 @@ class Blog(Obj):
         ):
             raise Forbidden
 
-        new_id = await conn.fetchval(
-            cls._sqls['insert'], user_id, fandom_id, fields['url'],
-            fields['title'], fields['description'], fields['avatar'])
-
-        return new_id
+        try:
+            return await conn.fetchval(
+                cls._sqls['insert'], user_id, fandom_id, fields['url'],
+                fields['title'], fields['description'], fields['avatar'])
+        except asyncpg.exceptions.UniqueViolationError:
+            raise BlogUrlAlreadyTaken
 
     async def update(self, fields: dict):
 

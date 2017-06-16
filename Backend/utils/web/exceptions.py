@@ -90,6 +90,11 @@ class FandomUrlAlreadyTaken(FailException):
     description = 'Fandom with specified url already exists.'
 
 
+class BlogUrlAlreadyTaken(FailException):
+    status_code = 409
+    description = 'Blog with specified url already exists in this fandom.'
+
+
 class AlreadyModer(FailException):
     status_code = 409
     description = 'This user is already moderator'
