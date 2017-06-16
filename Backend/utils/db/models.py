@@ -566,7 +566,7 @@ class Blog(Obj):
 
         # Проверка
         if (
-            self._data['owner'] != self._uid and
+            self._data['attributes']['owner'] != self._uid and
             # TODO: BlogModer.check_exists
             not await FandomModer.check_exists(
                 self._conn, self._uid, self._data['id'], 'edit_b') and
@@ -582,7 +582,7 @@ class Blog(Obj):
 
         # Проверка
         if (
-            self._data['owner'] != self._uid and
+            self._data['attributes']['owner'] != self._uid and
             # TODO: BlogModer.check_exists
             not await FandomModer.check_exists(
                 self._conn, self._uid,

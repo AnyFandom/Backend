@@ -4,7 +4,7 @@
 from ..utils.db import models as m
 from ..utils.web import BaseView, JsonResponse, validators as v
 
-__all__ = ('BlogList', 'Blog')
+__all__ = ('BlogList', 'Blog', 'BlogHistory')
 
 
 class BlogList(BaseView):
