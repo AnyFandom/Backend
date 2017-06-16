@@ -22,3 +22,9 @@ class Blog(BaseView):
         await (await m.Blog.id_u(self.request)).update(body)
 
         return JsonResponse()
+
+
+class BlogHistory(BaseView):
+    async def get(self):
+        return JsonResponse(await (await m.Blog.id_u(self.request)).history())
+

@@ -494,7 +494,10 @@ class Blog(Obj):
                "title=$3, description=$4, avatar=$5 WHERE id=$2",
 
         # args: blog_id
-        delete="DELETE FROM blogs WHERE id=$1"
+        delete="DELETE FROM blogs WHERE id=$1",
+
+        # args: fandom_id
+        history="SELECT * FROM blogs_history($1) ORDER BY id, edited_at ASC"
     )
 
     _type = 'blogs'
@@ -545,7 +548,6 @@ class Blog(Obj):
                      user_id: int, fields: dict) -> int:
 
         # TODO: Больше проверок
-
         if (
             await FandomBanned.check_exists(conn, user_id, fandom_id)
         ):
@@ -572,4 +574,21 @@ class Blog(Obj):
         await self._conn.execute(
             self._sqls['update'], self._uid, self._data['id'],
             fields['title'], fields['description'], fields['avatar'])
+
+    async def history(self) -> Tuple['Blog', ...]:
+
+        # Проверка
+        if (
+            self._data['owner'] != self._uid and
+            # TODO: BlogModer.check_exists
+            not await FandomModer.check_exists(
+                self._conn, self._uid,
+                self._data['attributes']['fandom_id'], 'edit_b') and
+            not await User.check_admin(self._conn, self._uid)
+        ):
+            raise Forbidden
+
+        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
+
+        return tuple(self.__class__(x) for x in resp)
 
