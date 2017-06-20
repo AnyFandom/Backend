@@ -4,9 +4,16 @@
 import hmac
 import struct
 from hashlib import sha1 as alg
-from base64 import urlsafe_b64encode as b64e, urlsafe_b64decode as b64d
+from base64 import urlsafe_b64encode as b64e, urlsafe_b64decode
 
 from ..exceptions import InvalidToken
+
+
+def b64d(s):
+    try:
+        return urlsafe_b64decode(s)
+    except Exception:
+        raise InvalidToken
 
 
 def _sign(inp: bytes, key: bytes):
