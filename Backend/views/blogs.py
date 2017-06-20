@@ -17,8 +17,8 @@ class Blog(BaseView):
     async def get(self):
         return JsonResponse(await m.Blog.id_u(self.request))
 
-    async def patch(self):
-        body = await v.get_body(self.request, v.blogs.update)
+    @v.get_body(v.blogs.update)
+    async def patch(self, body):
         await (await m.Blog.id_u(self.request)).update(body)
 
         return JsonResponse()

@@ -83,8 +83,21 @@ class JsonValidator:
         return resp
 
 
-async def get_body(request: Request, validator: JsonValidator):
+async def _get_body(request: Request, validator: JsonValidator):
     try:
         return validator(await request.json())
     except json.decoder.JSONDecodeError as exc:
         raise InvalidJson(details=str(exc))
+
+
+def get_body(validator: JsonValidator):
+    def wrap(func):
+        async def wrap2(*args):
+            if isinstance(args[0], Request):
+                request = args[0]
+            else:
+                request = args[0].request
+
+            return await func(args[0], await _get_body(request, validator))
+        return wrap2
+    return wrap

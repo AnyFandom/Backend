@@ -12,9 +12,9 @@ from ..utils.web.exceptions import NotYetImplemented, InvalidToken
 __all__ = ('register', 'login', 'refresh', 'invalidate', 'change', 'reset')
 
 
-async def register(request):
+@v.get_body(v.auth.register)
+async def register(request, body):
     """Регистрация нового пользователя"""
-    body = await v.get_body(request, v.auth.register)
     new_id = await db.auth.register(
         request.conn, body['username'], body['password']
     )
@@ -25,9 +25,9 @@ async def register(request):
     )
 
 
-async def login(request):
+@v.get_body(v.auth.login)
+async def login(request, body):
     """Получение токенов по логину/паролю"""
-    body = await v.get_body(request, v.auth.login)
     user_id, rand = await db.auth.login(
         request.conn, body['username'], body['password']
     )
@@ -44,10 +44,9 @@ async def login(request):
     ))
 
 
-async def refresh(request):
+@v.get_body(v.auth.refresh)
+async def refresh(request, body):
     """Получение нового access токена по refresh токену"""
-    body = await v.get_body(request, v.auth.refresh)
-
     decoded = decode_timed(
         body['refresh_token'].encode('utf-8'),
         key=request.app['cfg']['refresh_key']
@@ -65,23 +64,23 @@ async def refresh(request):
         raise InvalidToken
 
 
-async def invalidate(request):
+@v.get_body(v.auth.invalidate)
+async def invalidate(request, body):
     """Анулировать все refresh токены (access токены все еще действуют)"""
-    body = await v.get_body(request, v.auth.invalidate)
     await db.auth.invalidate(
         request.conn, body['username'], body['password']
     )
     return JsonResponse()
 
 
-async def change(request):
+@v.get_body(v.auth.change)
+async def change(request, body):
     """Сменить пароль"""
-    body = await v.get_body(request, v.auth.change)
     await db.auth.change(
         request.conn, body['username'], body['password'], body['new_password']
     )
     return JsonResponse()
 
 
-async def reset(request):
+async def reset(request, body):
     raise NotYetImplemented

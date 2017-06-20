@@ -17,8 +17,8 @@ class User(BaseView):
     async def get(self):
         return JsonResponse(await m.User.id_u(self.request))
 
-    async def patch(self):
-        body = await v.get_body(self.request, v.users.update)
+    @v.get_body(v.users.update)
+    async def patch(self, body):
         await (await m.User.id_u(self.request)).update(body)
 
         return JsonResponse()

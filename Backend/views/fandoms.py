@@ -16,9 +16,8 @@ class FandomList(BaseView):
         return JsonResponse(
             await m.Fandom.select(self.request.conn, self.request.uid))
 
-    async def post(self):
-        body = await v.get_body(self.request, v.fandoms.insert)
-
+    @v.get_body(v.fandoms.insert)
+    async def post(self, body):
         new_id = await m.Fandom.insert(
             self.request.conn, self.request.uid, body)
 
@@ -32,8 +31,8 @@ class Fandom(BaseView):
     async def get(self):
         return JsonResponse(await m.Fandom.id_u(self.request))
 
-    async def patch(self):
-        body = await v.get_body(self.request, v.fandoms.update)
+    @v.get_body(v.fandoms.update)
+    async def patch(self, body):
         await (await m.Fandom.id_u(self.request)).update(body)
 
         return JsonResponse()
@@ -50,8 +49,8 @@ class FandomModerList(BaseView):
         return JsonResponse(
             await (await m.Fandom.id_u(self.request)).moders_select())
 
-    async def post(self):
-        body = await v.get_body(self.request, v.fandoms.moders_insert)
+    @v.get_body(v.fandoms.moders_insert)
+    async def post(self, body):
         ids = await (await m.Fandom.id_u(self.request)).moders_insert(body)
 
         loc = '/fandoms/%i/moders/%i' % ids
@@ -70,8 +69,8 @@ class FandomModer(BaseView):
         except (IndexError, ValueError):
             raise ObjectNotFound
 
-    async def patch(self):
-        body = await v.get_body(self.request, v.fandoms.moders_update)
+    @v.get_body(v.fandoms.moders_update)
+    async def patch(self, body):
         await (await (await m.Fandom.id_u(self.request)).moders_select(
             self.request.match_info['moder']))[0].update(body)
 
@@ -89,8 +88,8 @@ class FandomBannedList(BaseView):
         return JsonResponse(
             await (await m.Fandom.id_u(self.request)).bans_select())
 
-    async def post(self):
-        body = await v.get_body(self.request, v.fandoms.bans_insert)
+    @v.get_body(v.fandoms.bans_insert)
+    async def post(self, body):
         ids = await (await m.Fandom.id_u(self.request)).bans_insert(body)
 
         loc = '/fandoms/%i/bans/%i' % ids
@@ -121,8 +120,8 @@ class FandomBlogList(BaseView):
         return JsonResponse(
             await (await m.Fandom.id_u(self.request)).blogs_select())
 
-    async def post(self):
-        body = await v.get_body(self.request, v.blogs.insert)
+    @v.get_body(v.blogs.insert)
+    async def post(self, body):
         new_id = await (await m.Fandom.id_u(self.request)).blogs_insert(body)
 
         loc = '/blogs/%i' % new_id
