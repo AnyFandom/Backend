@@ -5,115 +5,13 @@ from typing import Union, Tuple
 
 import asyncpg
 
-from .models_base import Obj
-from ..web.exceptions import (Forbidden, ObjectNotFound, AlreadyModer,
-                              AlreadyBanned, UserIsBanned, UserIsModer,
-                              FandomUrlAlreadyTaken, BlogUrlAlreadyTaken)
+from .base import Obj
+from ...web.exceptions import (Forbidden, ObjectNotFound, AlreadyModer,
+                               AlreadyBanned, UserIsBanned, UserIsModer,
+                               FandomUrlAlreadyTaken)
+from .users import User
 
-
-class User(Obj):
-    _sqls = dict(
-        select="SELECT * FROM users %s ORDER BY id ASC",
-
-        # args: edited_by, user_id, description, avatar,
-        update="UPDATE users SET edited_by=$1, "
-               "description=$3, avatar=$4 WHERE id=$2",
-
-        # args: user_id
-        history="SELECT * FROM users_history ($1) ORDER BY id, edited_at ASC",
-
-        # args: user_id
-        check_exists="SELECT EXISTS (SELECT 1 FROM users WHERE id=$1)",
-
-        # args: user_id
-        check_admin="SELECT EXISTS (SELECT 1 FROM admins WHERE user_id=$1)"
-    )
-
-    _type = 'users'
-
-    @classmethod
-    async def check_exists(cls, conn: asyncpg.connection.Connection,
-                           user_id: int) -> bool:
-
-        return await conn.fetchval(cls._sqls['check_exists'], user_id)
-
-    @classmethod
-    async def check_admin(cls, conn: asyncpg.connection.Connection,
-                          user_id: int) -> bool:
-
-        return await conn.fetchval(cls._sqls['check_admin'], user_id)
-
-    @classmethod
-    async def id_u(cls, request) -> 'User':
-        conn = request.conn
-        user = request.match_info['user']
-        uid = request.uid
-
-        try:
-            if user == 'current':
-                if uid != 0:
-                    return (await cls.select(conn, uid, uid))[0]
-                else:
-                    raise Forbidden
-            elif user[:2] == 'u/':
-                return (await cls.select(conn, uid, user[2:], u=True))[0]
-            else:
-                return (await cls.select(conn, uid, user))[0]
-        except (IndexError, ValueError):
-            raise ObjectNotFound
-
-    @classmethod
-    async def select(cls, conn: asyncpg.connection.Connection,
-                     user_id: int, *target_ids: Union[int, str],
-                     u: bool=False) -> Tuple['User', ...]:
-
-        # На вход поданы имена
-        if u and target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE username = ANY($1::CITEXT[])",
-                target_ids)
-
-        # На вход поданы ID
-        elif target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
-                tuple(map(int, target_ids)))
-
-        # На вход не подано ничего
-        else:
-            resp = await conn.fetch(cls._sqls['select'] % '')
-
-        return tuple(cls(x, conn, user_id) for x in resp)
-
-    @classmethod
-    async def insert(cls, conn, user_id, fields):
-        pass
-
-    async def update(self, fields: dict):
-
-        # Проверка
-        if (
-            self._data['id'] != self._uid and
-            not await User.check_admin(self._conn, self._uid)
-        ):
-            raise Forbidden
-
-        await self._conn.execute(
-            self._sqls['update'], self._uid, self._data['id'],
-            fields['description'], fields['avatar'])
-
-    async def history(self) -> Tuple['User', ...]:
-
-        # Проверка
-        if (
-            self._data['id'] != self._uid and
-            not await User.check_admin(self._conn, self._uid)
-        ):
-            raise Forbidden
-
-        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
-
-        return tuple(self.__class__(x) for x in resp)
+__all__ = ('FandomModer', 'FandomBanned', 'Fandom')
 
 
 class FandomModer(Obj):
@@ -344,6 +242,9 @@ class FandomBanned(Obj):
         )
 
 
+from .blogs import Blog  # noqa
+
+
 class Fandom(Obj):
     _sqls = dict(
         select="SELECT * FROM fandoms %s ORDER BY id",
@@ -473,6 +374,17 @@ class Fandom(Obj):
 
     # Blogs
 
+    async def blogs_id_u(self, request) -> Blog:
+        blog = request.match_info['blog']
+
+        try:
+            if blog[:2] == 'u/':
+                return (await self.blogs_select(blog[2:], u=True))[0]
+            else:
+                return (await self.blogs_select(blog))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
     async def blogs_select(self, *target_ids: Union[int, str], u: bool=False
                            ) -> Tuple['Blog', ...]:
         return await Blog.select(
@@ -482,116 +394,3 @@ class Fandom(Obj):
 
         return await Blog.insert(
             self._conn, self._data['id'], self._uid, fields)
-
-
-class Blog(Obj):
-    _sqls = dict(
-        select="SELECT * FROM blogs %s ORDER BY id",
-
-        # args: user_id, fandom_id, url, title, description, avatar
-        insert="SELECT blogs_create($1, $2, $3, $4, $5, $6)",
-
-        # args: edited_by, blog_id, title, description, avatar
-        update="UPDATE blogs SET edited_by=$1, "
-               "title=$3, description=$4, avatar=$5 WHERE id=$2",
-
-        # args: blog_id
-        delete="DELETE FROM blogs WHERE id=$1",
-
-        # args: fandom_id
-        history="SELECT * FROM blogs_history($1) ORDER BY id, edited_at ASC"
-    )
-
-    _type = 'blogs'
-
-    @classmethod
-    async def id_u(cls, request) -> 'Blog':
-        conn = request.conn
-        blog = request.match_info['blog']
-        uid = request.uid
-
-        try:
-            if blog[:2] == 'u/':
-                return (await (await Fandom.id_u(request)).blogs_select(
-                    blog[2:], u=True))[0]
-            else:
-                return (await cls.select(conn, 0, uid, blog))[0]
-        except (IndexError, ValueError):
-            raise ObjectNotFound
-
-    # noinspection PyMethodOverriding
-    @classmethod
-    async def select(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, *target_ids: Union[int, str],
-                     u: bool=False) -> Tuple['Blog', ...]:
-
-        # На вход поданы url
-        if u and target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE url = ANY($1::CITEXT[]) "
-                                      "AND fandom_id = $2",
-                target_ids, fandom_id)
-
-        # На вход поданы ID
-        elif target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
-                tuple(map(int, target_ids)))
-
-        # На вход не подано ничего
-        else:
-            resp = await conn.fetch(cls._sqls['select'] % '')
-
-        return tuple(cls(x, conn, user_id) for x in resp)
-
-    # noinspection PyMethodOverriding
-    @classmethod
-    async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, fields: dict) -> int:
-
-        # TODO: Больше проверок
-        if (
-            await FandomBanned.check_exists(conn, user_id, fandom_id)
-        ):
-            raise Forbidden
-
-        try:
-            return await conn.fetchval(
-                cls._sqls['insert'], user_id, fandom_id, fields['url'],
-                fields['title'], fields['description'], fields['avatar'])
-        except asyncpg.exceptions.UniqueViolationError:
-            raise BlogUrlAlreadyTaken
-
-    async def update(self, fields: dict):
-
-        # Проверка
-        if (
-            self._data['attributes']['owner'] != self._uid and
-            # TODO: BlogModer.check_exists
-            not await FandomModer.check_exists(
-                self._conn, self._uid, self._data['id'], 'edit_b') and
-            not await User.check_admin(self._conn, self._uid)
-        ):
-            return Forbidden
-
-        await self._conn.execute(
-            self._sqls['update'], self._uid, self._data['id'],
-            fields['title'], fields['description'], fields['avatar'])
-
-    async def history(self) -> Tuple['Blog', ...]:
-
-        # Проверка
-        if (
-            self._data['attributes']['owner'] != self._uid and
-            # TODO: BlogModer.check_exists
-            not await FandomModer.check_exists(
-                self._conn, self._uid,
-                self._data['attributes']['fandom_id'], 'edit_b') and
-            not await User.check_admin(self._conn, self._uid)
-        ):
-            raise Forbidden
-
-        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
-
-        return tuple(self.__class__(x) for x in resp)
-

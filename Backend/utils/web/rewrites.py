@@ -7,20 +7,6 @@ from datetime import datetime
 from aiohttp import web, hdrs, web_urldispatcher
 from multidict import CIMultiDict
 
-from ..db.models_base import Obj
-
-
-class Encoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, datetime):
-            return o.isoformat()
-        elif isinstance(o, Obj):
-            return dict(o)
-        super().default(o)
-
-    def __call__(self, *args, **kwargs):
-        return self.encode(*args, **kwargs)
-
 
 class JsonResponse(web.Response):
     def __init__(self, body=None, status: str='success', *,
@@ -36,6 +22,21 @@ class JsonResponse(web.Response):
 
         super().__init__(body=body, status=status_code,
                          headers=headers, **kwargs)
+
+
+from ..db.models.base import Obj  # noqa
+
+
+class Encoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        elif isinstance(o, Obj):
+            return dict(o)
+        super().default(o)
+
+    def __call__(self, *args, **kwargs):
+        return self.encode(*args, **kwargs)
 
 
 # Да, мне стыдно

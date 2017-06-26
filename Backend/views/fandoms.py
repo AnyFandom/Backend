@@ -132,4 +132,5 @@ class FandomBlogList(BaseView):
 
 class FandomBlog(BaseView):
     async def get(self):
-        return JsonResponse(await m.Blog.id_u(self.request))
+        return JsonResponse(
+            await (await m.Fandom.id_u(self.request)).blogs_id_u(self.request))
