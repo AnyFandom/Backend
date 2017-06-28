@@ -25,8 +25,20 @@ class Obj(Mapping, metaclass=ABCMeta):
 
     #########
 
+    @property
+    def id(self):
+        return self._data['id']
+
+    @property
+    def attrs(self):
+        return self._data['attributes']
+
+    @property
+    def meta(self):
+        return self._data['meta']
+
     def __repr__(self):
-        return '<%s id=%i>' % (type(self).__name__, self._data['id'])
+        return '<%s id=%i>' % (type(self).__name__, self.id)
 
     _type = ''
 

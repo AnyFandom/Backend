@@ -93,24 +93,24 @@ class User(Obj):
 
         # Проверка
         if (
-            self._data['id'] != self._uid and
+            self.id != self._uid and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
         await self._conn.execute(
-            self._sqls['update'], self._uid, self._data['id'],
+            self._sqls['update'], self._uid, self.id,
             fields['description'], fields['avatar'])
 
     async def history(self) -> Tuple['User', ...]:
 
         # Проверка
         if (
-            self._data['id'] != self._uid and
+            self.id != self._uid and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
-        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
+        resp = await self._conn.fetch(self._sqls['history'], self.id)
 
         return tuple(self.__class__(x) for x in resp)

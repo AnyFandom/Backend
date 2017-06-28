@@ -113,14 +113,14 @@ class FandomModer(Obj):
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self._data['id'], 'manage_f') and
+                self._conn, self._uid, self.id, 'manage_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
         await self._conn.execute(
-            self._sqls['update'], self._data['id'],
-            self._data['meta']['fandom_id'],
+            self._sqls['update'], self.id,
+            self.meta['fandom_id'],
             fields['edit_f'], fields['manage_f'], fields['ban_f'],
             fields['create_b'], fields['edit_b'],
             fields['edit_p'], fields['edit_c'])
@@ -130,7 +130,7 @@ class FandomModer(Obj):
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self._data['id'], 'manage_f') and
+                self._conn, self._uid, self.id, 'manage_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
@@ -138,7 +138,7 @@ class FandomModer(Obj):
         await self._conn.execute(
             self._sqls['delete'],
 
-            self._data['id'], self._data['meta']['fandom_id']
+            self.id, self.meta['fandom_id']
         )
 
 
@@ -166,7 +166,6 @@ class FandomBanned(Obj):
 
     _type = 'users'
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def check_exists(cls, conn: asyncpg.connection.Connection,
                            user_id: int, fandom_id: int):
@@ -230,7 +229,7 @@ class FandomBanned(Obj):
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self._data['id'], 'ban_f') and
+                self._conn, self._uid, self.id, 'ban_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
@@ -238,7 +237,7 @@ class FandomBanned(Obj):
         await self._conn.execute(
             self._sqls['delete'],
 
-            self._data['id'], self._data['meta']['fandom_id']
+            self.id, self.meta['fandom_id']
         )
 
 
@@ -320,13 +319,13 @@ class Fandom(Obj):
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self._data['id'], 'edit_f') and
+                self._conn, self._uid, self.id, 'edit_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
         await self._conn.execute(
-            self._sqls['update'], self._uid, self._data['id'],
+            self._sqls['update'], self._uid, self.id,
             fields['title'], fields['description'], fields['avatar'])
 
     async def history(self) -> Tuple['Fandom', ...]:
@@ -334,12 +333,12 @@ class Fandom(Obj):
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self._data['id'], 'edit_f') and
+                self._conn, self._uid, self.id, 'edit_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
-        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
+        resp = await self._conn.fetch(self._sqls['history'], self.id)
 
         return tuple(self.__class__(x) for x in resp)
 
@@ -349,28 +348,28 @@ class Fandom(Obj):
                             ) -> Tuple[FandomModer, ...]:
 
         return await FandomModer.select(
-            self._conn, self._data['id'], self._uid, *target_ids)
+            self._conn, self.id, self._uid, *target_ids)
 
     async def moders_insert(self, fields: dict) -> Tuple[int, int]:
 
         await FandomModer.insert(
-            self._conn, self._data['id'], self._uid, fields)
+            self._conn, self.id, self._uid, fields)
 
-        return self._data['id'], fields['user_id']
+        return self.id, fields['user_id']
 
     # Bans
 
     async def bans_select(self, *target_ids: Union[int, str]
                           ) -> Tuple[FandomBanned, ...]:
         return await FandomBanned.select(
-            self._conn, self._data['id'], self._uid, *target_ids)
+            self._conn, self.id, self._uid, *target_ids)
 
     async def bans_insert(self, fields: dict) -> Tuple[int, int]:
 
         await FandomBanned.insert(
-            self._conn, self._data['id'], self._uid, fields)
+            self._conn, self.id, self._uid, fields)
 
-        return self._data['id'], fields['user_id']
+        return self.id, fields['user_id']
 
     # Blogs
 
@@ -388,9 +387,9 @@ class Fandom(Obj):
     async def blogs_select(self, *target_ids: Union[int, str], u: bool=False
                            ) -> Tuple['Blog', ...]:
         return await Blog.select(
-            self._conn, self._data['id'], self._uid, *target_ids, u=u)
+            self._conn, self.id, self._uid, *target_ids, u=u)
 
     async def blogs_insert(self, fields: dict) -> int:
 
         return await Blog.insert(
-            self._conn, self._data['id'], self._uid, fields)
+            self._conn, self.id, self._uid, fields)

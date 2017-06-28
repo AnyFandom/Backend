@@ -93,31 +93,31 @@ class Blog(Obj):
 
         # Проверка
         if (
-            self._data['attributes']['owner'] != self._uid and
+            self.attrs['owner'] != self._uid and
             # TODO: BlogModer.check_exists
             not await FandomModer.check_exists(
-                self._conn, self._uid, self._data['id'], 'edit_b') and
+                self._conn, self._uid, self.id, 'edit_b') and
             not await User.check_admin(self._conn, self._uid)
         ):
             return Forbidden
 
         await self._conn.execute(
-            self._sqls['update'], self._uid, self._data['id'],
+            self._sqls['update'], self._uid, self.id,
             fields['title'], fields['description'], fields['avatar'])
 
     async def history(self) -> Tuple['Blog', ...]:
 
         # Проверка
         if (
-            self._data['attributes']['owner'] != self._uid and
+            self.attrs['owner'] != self._uid and
             # TODO: BlogModer.check_exists
             not await FandomModer.check_exists(
                 self._conn, self._uid,
-                self._data['attributes']['fandom_id'], 'edit_b') and
+                self.attrs['fandom_id'], 'edit_b') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
 
-        resp = await self._conn.fetch(self._sqls['history'], self._data['id'])
+        resp = await self._conn.fetch(self._sqls['history'], self.id)
 
         return tuple(self.__class__(x) for x in resp)
