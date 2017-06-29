@@ -95,24 +95,45 @@ class BlogUrlAlreadyTaken(FailException):
     description = 'Blog with specified url already exists in this fandom.'
 
 
-class AlreadyModer(FailException):
+class UserIsModer(FailException):
     status_code = 409
-    description = 'This user is already moderator'
+    description = 'User that you are trying to %s is %smoderator of this %s'
 
+    def __init__(self, action: str, place: str, **kwargs):
+        assert action in ('moder', 'ban'), 'Invalid action'
 
-class AlreadyBanned(FailException):
-    status_code = 409
-    description = 'This user is already banned'
+        self.description %= (
+            'add as moderator' if action == 'moder' else 'ban',
+            'already ' if action == 'moder' else '', place)
+
+        super().__init__(**kwargs)
 
 
 class UserIsBanned(FailException):
-    status_code = 400
-    description = 'User that you are trying to add as moderator is banned.'
+    status_code = 409
+    description = 'User that you are trying to %s is %sbanned from this %s'
+
+    def __init__(self, action: str, place: str, **kwargs):
+        assert action in ('moder', 'ban'), 'Invalid action'
+
+        self.description %= (
+            'add as moderator' if action == 'moder' else 'ban',
+            'already ' if action == 'ban' else '', place)
+
+        super().__init__(**kwargs)
 
 
-class UserIsModer(FailException):
-    status_code = 400
-    description = 'User that you are trying ban is moderator.'
+class UserIsOwner(FailException):
+    status_code = 409
+    description = 'User that you are trying to %s is owner of this %s'
+
+    def __init__(self, action: str, place: str, **kwargs):
+        assert action in ('moder', 'ban'), 'Invalid action'
+
+        self.description %= (
+            'add as moderator' if action == 'moder' else 'ban', place)
+
+        super().__init__(**kwargs)
 
 
 class ExpectationFailed(FailException):

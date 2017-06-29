@@ -6,9 +6,8 @@ from typing import Union, Tuple
 import asyncpg
 
 from .base import Obj
-from ...web.exceptions import (Forbidden, ObjectNotFound, AlreadyModer,
-                               AlreadyBanned, UserIsBanned, UserIsModer,
-                               FandomUrlAlreadyTaken)
+from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
+                               UserIsModer, FandomUrlAlreadyTaken)
 from .users import User
 
 __all__ = ('FandomModer', 'FandomBanned', 'Fandom')
@@ -94,8 +93,7 @@ class FandomModer(Obj):
 
         # А не забанен ли он?
         if await FandomBanned.check_exists(conn, fields['user_id'], fandom_id):
-            # TODO: User is banned from this fandom
-            raise UserIsBanned
+            raise UserIsBanned('moder', 'fandom')
 
         try:
             await conn.execute(
@@ -107,14 +105,14 @@ class FandomModer(Obj):
                 fields['edit_p'], fields['edit_c']
             )
         except asyncpg.exceptions.UniqueViolationError:
-            raise AlreadyModer
+            raise UserIsModer('moder', 'fandom')
 
     async def update(self, fields: dict):
 
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self.id, 'manage_f') and
+                self._conn, self._uid, self.meta['fandom_id'], 'manage_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
@@ -131,7 +129,7 @@ class FandomModer(Obj):
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self.id, 'manage_f') and
+                self._conn, self._uid, self.meta['fandom_id'], 'manage_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden
@@ -211,8 +209,7 @@ class FandomBanned(Obj):
 
         # А не модер ли он?
         if await FandomModer.check_exists(conn, fields['user_id'], fandom_id):
-            # TODO: User is moderating this fandom
-            raise UserIsModer
+            raise UserIsModer('ban', 'fandom')
 
         try:
             await conn.execute(
@@ -221,7 +218,7 @@ class FandomBanned(Obj):
                 fields['user_id'], fandom_id,
                 user_id, fields['reason'])
         except asyncpg.exceptions.UniqueViolationError:
-            raise AlreadyBanned
+            raise UserIsBanned('ban', 'fandom')
 
     async def update(self, fields):
         pass
@@ -231,7 +228,7 @@ class FandomBanned(Obj):
         # Проверка
         if (
             not await FandomModer.check_exists(
-                self._conn, self._uid, self.id, 'ban_f') and
+                self._conn, self._uid, self.meta['fandom_id'], 'ban_f') and
             not await User.check_admin(self._conn, self._uid)
         ):
             raise Forbidden

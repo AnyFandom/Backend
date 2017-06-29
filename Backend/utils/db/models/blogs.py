@@ -6,9 +6,8 @@ from typing import Union, Tuple
 import asyncpg
 
 from .base import Obj
-from ...web.exceptions import (Forbidden, ObjectNotFound, AlreadyModer,
-                               AlreadyBanned, UserIsBanned, UserIsModer,
-                               BlogUrlAlreadyTaken)
+from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
+                               UserIsModer, UserIsOwner, BlogUrlAlreadyTaken)
 from .users import User
 from .fandoms import FandomModer, FandomBanned
 
