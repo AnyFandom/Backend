@@ -29,11 +29,21 @@ class Blog(Obj):
         # args: blog_id
         delete="DELETE FROM blogs WHERE id=$1",
 
-        # args: fandom_id
-        history="SELECT * FROM blogs_history($1) ORDER BY id, edited_at ASC"
+        # args: blog_id
+        history="SELECT * FROM blogs_history($1) ORDER BY id, edited_at ASC",
+
+        # args: user_id, blog_id
+        check_owner="SELECT EXISTS (SELECT 1 FROM blogs "
+                    "WHERE owner=$1 AND id=$2)"
     )
 
     _type = 'blogs'
+
+    @classmethod
+    async def check_owner(cls, conn: asyncpg.connection.Connection,
+                          user_id: int, blog_id: int):
+        """Использовать только в крайних случаях"""
+        return await conn.fetchval(cls._sqls['check_owner'], user_id, blog_id)
 
     @classmethod
     async def id_u(cls, request) -> 'Blog':

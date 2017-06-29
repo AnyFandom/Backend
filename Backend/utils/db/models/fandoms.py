@@ -93,7 +93,8 @@ class FandomModer(Obj):
             raise ObjectNotFound
 
         # А не забанен ли он?
-        if await FandomBanned.check_exists(conn, fandom_id, fields['user_id']):
+        if await FandomBanned.check_exists(conn, fields['user_id'], fandom_id):
+            # TODO: User is banned from this fandom
             raise UserIsBanned
 
         try:
@@ -210,6 +211,7 @@ class FandomBanned(Obj):
 
         # А не модер ли он?
         if await FandomModer.check_exists(conn, fields['user_id'], fandom_id):
+            # TODO: User is moderating this fandom
             raise UserIsModer
 
         try:
