@@ -40,10 +40,10 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{fandom:' + _arg + '}', views.Fandom)
     url('*', '/fandoms/{fandom:' + _arg + '}/history', views.FandomHistory)
     url('*', '/fandoms/{fandom:' + _arg + '}/moders', views.FandomModerList)
-    url('*', '/fandoms/{fandom:' + _arg + '}/moders/{moder:' + _arg + '}',
+    url('*', '/fandoms/{fandom:' + _arg + '}/moders/{moder:\w+}',
         views.FandomModer)
     url('*', '/fandoms/{fandom:' + _arg + '}/bans', views.FandomBannedList)
-    url('*', '/fandoms/{fandom:' + _arg + '}/bans/{banned:' + _arg + '}',
+    url('*', '/fandoms/{fandom:' + _arg + '}/bans/{banned:\w+}',
         views.FandomBanned)
     url('*', '/fandoms/{fandom:' + _arg + '}/blogs', views.FandomBlogList)
     url('*', '/fandoms/{fandom:' + _arg + '}/blogs/{blog:' + _arg + '}',

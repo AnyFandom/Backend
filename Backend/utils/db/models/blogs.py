@@ -57,16 +57,23 @@ class Blog(Obj):
 
     # noinspection PyMethodOverriding
     @classmethod
-    async def select(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, *target_ids: Union[int, str],
+    async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     fandom_id: int, *target_ids: Union[int, str],
                      u: bool=False) -> Tuple['Blog', ...]:
 
-        # На вход поданы url
-        if u and target_ids:
+        # На вход поданы url И fandom_id
+        if u and target_ids and fandom_id:
             resp = await conn.fetch(
                 cls._sqls['select'] % "WHERE url = ANY($1::CITEXT[]) "
                                       "AND fandom_id = $2",
                 target_ids, fandom_id)
+
+        # На вход поданы ID И fandom_id
+        elif target_ids and fandom_id:
+            resp = await conn.fetch(
+                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[]) "
+                                      "AND fandom_id = $2",
+                tuple(map(int, target_ids)), fandom_id)
 
         # На вход поданы ID
         elif target_ids:
@@ -82,8 +89,8 @@ class Blog(Obj):
 
     # noinspection PyMethodOverriding
     @classmethod
-    async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, fields: dict) -> int:
+    async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     fandom_id: int, fields: dict) -> int:
 
         # TODO: Больше проверок
         if (

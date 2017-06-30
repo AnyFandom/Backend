@@ -3,6 +3,7 @@
 
 import json
 from datetime import datetime
+from collections import Sequence
 
 from aiohttp import web, hdrs, web_urldispatcher
 from multidict import CIMultiDict
@@ -24,6 +25,23 @@ class JsonResponse(web.Response):
                          headers=headers, **kwargs)
 
 
+def json_response(func):
+    async def wrapped(*args, **kwargs):
+        resp = await func(*args, **kwargs)
+        if isinstance(resp, Sequence):
+            assert len(resp) <= 3, 'Too long resp'
+            if len(resp) == 1:
+                return JsonResponse(resp[0])
+            elif len(resp) == 2:
+                return JsonResponse(resp[0], status_code=resp[1])
+            elif len(resp) == 3:
+                return JsonResponse(resp[0], status_code=resp[1],
+                                    headers=resp[2])
+        else:
+            return JsonResponse(resp)
+    return wrapped
+
+
 from ..db.models.base import Obj  # noqa
 
 
@@ -39,7 +57,6 @@ class Encoder(json.JSONEncoder):
         return self.encode(*args, **kwargs)
 
 
-# Да, мне стыдно
 from .exceptions import (ResourceNotFound, MethodNotAllowed,
                          ExpectationFailed)  # noqa
 

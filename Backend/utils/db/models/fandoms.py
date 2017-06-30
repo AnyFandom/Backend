@@ -58,8 +58,8 @@ class FandomModer(Obj):
 
     # noinspection PyMethodOverriding
     @classmethod
-    async def select(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, *target_ids: Union[int, str]
+    async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     fandom_id: int, *target_ids: Union[int, str]
                      ) -> Tuple['FandomModer', ...]:
 
         # На вход поданы ID
@@ -76,8 +76,8 @@ class FandomModer(Obj):
 
     # noinspection PyMethodOverriding
     @classmethod
-    async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, fields: dict):
+    async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     fandom_id: int, fields: dict):
 
         # Проверка
         if (
@@ -174,8 +174,8 @@ class FandomBanned(Obj):
 
     # noinspection PyMethodOverriding
     @classmethod
-    async def select(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, *target_ids: Union[int, str]
+    async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     fandom_id: int, *target_ids: Union[int, str]
                      ) -> Tuple['FandomBanned', ...]:
 
         # На вход поданы ID
@@ -192,8 +192,8 @@ class FandomBanned(Obj):
 
     # noinspection PyMethodOverriding
     @classmethod
-    async def insert(cls, conn: asyncpg.connection.Connection, fandom_id: int,
-                     user_id: int, fields: dict):
+    async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     fandom_id: int, fields: dict):
 
         # Проверка
         if (
@@ -343,30 +343,47 @@ class Fandom(Obj):
 
     # Moders
 
+    async def moders_id_u(self, request) -> FandomModer:
+        moder = request.match_info['moder']
+
+        try:
+            return (await self.moders_select(moder))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
     async def moders_select(self, *target_ids: Union[int, str]
                             ) -> Tuple[FandomModer, ...]:
 
         return await FandomModer.select(
-            self._conn, self.id, self._uid, *target_ids)
+            self._conn, self._uid, self.id, *target_ids)
 
     async def moders_insert(self, fields: dict) -> Tuple[int, int]:
 
         await FandomModer.insert(
-            self._conn, self.id, self._uid, fields)
+            self._conn, self._uid, self.id, fields)
 
         return self.id, fields['user_id']
 
     # Bans
 
+    async def bans_id_u(self, request) -> FandomBanned:
+        banned = request.match_info['banned']
+
+        try:
+            return (await self.bans_select(banned))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
     async def bans_select(self, *target_ids: Union[int, str]
                           ) -> Tuple[FandomBanned, ...]:
+
         return await FandomBanned.select(
-            self._conn, self.id, self._uid, *target_ids)
+            self._conn, self._uid, self.id, *target_ids)
 
     async def bans_insert(self, fields: dict) -> Tuple[int, int]:
 
         await FandomBanned.insert(
-            self._conn, self.id, self._uid, fields)
+            self._conn, self._uid, self.id, fields)
 
         return self.id, fields['user_id']
 
@@ -385,6 +402,7 @@ class Fandom(Obj):
 
     async def blogs_select(self, *target_ids: Union[int, str], u: bool=False
                            ) -> Tuple['Blog', ...]:
+
         return await Blog.select(
             self._conn, self.id, self._uid, *target_ids, u=u)
 
