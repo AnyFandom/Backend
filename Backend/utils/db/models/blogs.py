@@ -5,7 +5,7 @@ from typing import Union, Tuple
 
 import asyncpg
 
-from .base import Obj
+from .base import Obj, SelectResult
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, UserIsOwner, BlogUrlAlreadyTaken)
 from .users import User
@@ -73,7 +73,7 @@ class BlogModer(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', blog_id)
 
-        return tuple(cls(x, conn, user_id, cls._meta) for x in resp)
+        return SelectResult(cls(x, conn, user_id, cls._meta) for x in resp)
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -200,7 +200,7 @@ class BlogBanned(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', blog_id)
 
-        return tuple(cls(x, conn, user_id, cls._meta) for x in resp)
+        return SelectResult(cls(x, conn, user_id, cls._meta) for x in resp)
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -331,7 +331,7 @@ class Blog(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '')
 
-        return tuple(cls(x, conn, user_id) for x in resp)
+        return SelectResult(cls(x, conn, user_id) for x in resp)
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -384,7 +384,7 @@ class Blog(Obj):
 
         resp = await self._conn.fetch(self._sqls['history'], self.id)
 
-        return tuple(self.__class__(x) for x in resp)
+        return SelectResult(self.__class__(x) for x in resp)
 
     # Moders
 

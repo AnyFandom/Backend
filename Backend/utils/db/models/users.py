@@ -5,7 +5,7 @@ from typing import Union, Tuple
 
 import asyncpg
 
-from .base import Obj
+from .base import Obj, SelectResult
 from ...web.exceptions import Forbidden, ObjectNotFound
 
 __all__ = ('User',)
@@ -83,7 +83,7 @@ class User(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '')
 
-        return tuple(cls(x, conn, user_id) for x in resp)
+        return SelectResult(cls(x, conn, user_id) for x in resp)
 
     @classmethod
     async def insert(cls, conn, user_id, fields):
@@ -113,4 +113,4 @@ class User(Obj):
 
         resp = await self._conn.fetch(self._sqls['history'], self.id)
 
-        return tuple(self.__class__(x) for x in resp)
+        return SelectResult(self.__class__(x) for x in resp)

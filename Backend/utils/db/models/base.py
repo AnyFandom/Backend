@@ -5,6 +5,11 @@ from collections import Mapping
 from abc import ABCMeta, abstractmethod
 
 
+# Страшный костыль
+class SelectResult(tuple):
+    pass
+
+
 class Obj(Mapping, metaclass=ABCMeta):
     def __init__(self, data, conn=None, user_id=None, meta=None):
         self._data = self._map(dict(data), meta)

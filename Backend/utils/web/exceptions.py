@@ -11,15 +11,14 @@ class JsonException(JsonResponse, Exception):
     status_code: int = None
     description: str = None
 
-    def __init__(self, *, headers=None, reason=None, details=None):
+    def __init__(self, *, headers=None, details=None):
         body = {'code': type(self).__name__, 'description': self.description}
 
         if details:
             body['details'] = details
 
         JsonResponse.__init__(self, body=body, status=self.status,
-                              headers=headers, reason=reason,
-                              status_code=self.status_code)
+                              headers=headers, status_code=self.status_code)
         Exception.__init__(self)
 
 

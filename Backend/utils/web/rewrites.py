@@ -10,10 +10,13 @@ from multidict import CIMultiDict
 
 
 class JsonResponse(web.Response):
-    def __init__(self, body=None, status: str='success', *,
-                 status_code=200, headers=None, **kwargs) -> None:
+    def __init__(self, body=None, status_code=None, headers=None, *,
+                 status: str='success', **kwargs) -> None:
         if headers is None:
             headers = CIMultiDict()
+
+        if status_code is None:
+            status_code = 200
 
         kwargs.pop('content-type', None)
         headers[hdrs.CONTENT_TYPE] = 'application/json; charset=utf-8'
@@ -25,24 +28,21 @@ class JsonResponse(web.Response):
                          headers=headers, **kwargs)
 
 
+from ..db.models.base import Obj, SelectResult  # noqa
+
+
 def json_response(func):
     async def wrapped(*args, **kwargs):
         resp = await func(*args, **kwargs)
-        if isinstance(resp, Sequence):
-            assert len(resp) <= 3, 'Too long resp'
-            if len(resp) == 1:
-                return JsonResponse(resp[0])
-            elif len(resp) == 2:
-                return JsonResponse(resp[0], status_code=resp[1])
-            elif len(resp) == 3:
-                return JsonResponse(resp[0], status_code=resp[1],
-                                    headers=resp[2])
-        else:
+
+        if isinstance(resp, SelectResult):
             return JsonResponse(resp)
+        elif isinstance(resp, Sequence):
+            assert len(resp) <= 3, "Resp > 3"
+            return JsonResponse(*resp)
+        else:
+            return JsonResponse()
     return wrapped
-
-
-from ..db.models.base import Obj  # noqa
 
 
 class Encoder(json.JSONEncoder):
