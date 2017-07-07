@@ -41,7 +41,7 @@ def json_response(func):
             assert len(resp) <= 3, "Resp > 3"
             return JsonResponse(*resp)
         else:
-            return JsonResponse()
+            return JsonResponse(resp)
     return wrapped
 
 
