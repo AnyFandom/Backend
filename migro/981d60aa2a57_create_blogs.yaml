@@ -54,47 +54,40 @@ upgrade: |
     avatar      TEXT                      NOT NULL
   );
 
-  CREATE FUNCTION blogs_functions () RETURNS TRIGGER AS $$
+  CREATE FUNCTION blogs_insert () RETURNS TRIGGER AS $$
     BEGIN
-
-      IF TG_OP = 'INSERT' THEN
 
         NEW.edited_at = NEW.created_at;
         NEW.edited_by = NEW.owner;
 
         RETURN NEW;
 
-      ELSIF TG_OP = 'UPDATE' THEN
+    END;
+  $$ LANGUAGE plpgsql;
 
-        NEW.id = OLD.id;
-        NEW.created_at = OLD.created_at;
-        NEW.fandom_id = OLD.fandom.id;
-        NEW.owner = OLD.owner;
-        NEW.url = OLD.url;
 
-        NEW.edited_at = now();
-        NEW.title = COALESCE(NEW.title, OLD.title);
-        NEW.description = COALESCE(NEW.description, OLD.description);
-        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+  CREATE FUNCTION blogs_update () RETURNS TRIGGER AS $$
+    BEGIN
 
-        IF hstore(NEW) - hstore(OLD) - ARRAY['edited_at', 'edited_by'] = ''::hstore THEN
-          RETURN NULL;
-        END IF;
+      NEW.edited_at = now();
+      NEW.title = COALESCE(NEW.title, OLD.title);
+      NEW.description = COALESCE(NEW.description, OLD.description);
+      NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
 
-        INSERT INTO blogs_history (id, edited_at, edited_by, title, description, avatar)
-        VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.title, OLD.description, OLD.avatar);
-
-        RETURN NEW;
-
-      ELSE
+      IF hstore(NEW) - hstore(OLD) - ARRAY['edited_at', 'edited_by'] = ''::hstore THEN
         RETURN NULL;
       END IF;
+
+      INSERT INTO blogs_history (id, edited_at, edited_by, title, description, avatar)
+      VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.title, OLD.description, OLD.avatar);
+
+      RETURN NEW;
 
     END;
   $$ LANGUAGE plpgsql;
 
-  CREATE TRIGGER functions BEFORE INSERT OR UPDATE OR DELETE
-  ON blogs FOR EACH ROW EXECUTE PROCEDURE blogs_functions ();
+  CREATE TRIGGER insert BEFORE INSERT ON blogs FOR EACH ROW EXECUTE PROCEDURE blogs_insert ();
+  CREATE TRIGGER update BEFORE UPDATE ON blogs FOR EACH ROW EXECUTE PROCEDURE blogs_update ();
 
   CREATE FUNCTION blogs_create (
     user_id     BIGINT,

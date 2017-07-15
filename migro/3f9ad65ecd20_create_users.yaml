@@ -38,43 +38,38 @@ upgrade: |
     avatar      TEXT        NOT NULL
   );
 
-  CREATE FUNCTION users_functions () RETURNS TRIGGER AS $$
+  CREATE FUNCTION users_insert () RETURNS TRIGGER AS $$
     BEGIN
 
-      IF TG_OP = 'INSERT' THEN
+      NEW.edited_at = NEW.created_at;
+      NEW.edited_by = NEW.id;
 
-        NEW.edited_at = NEW.created_at;
-        NEW.edited_by = NEW.id;
-
-        RETURN NEW;
-
-      ELSIF TG_OP = 'UPDATE' THEN
-
-        NEW.id = OLD.id;
-        NEW.created_at = OLD.created_at;
-        NEW.username = OLD.username;
-
-        NEW.edited_at = now();
-        NEW.description = COALESCE(NEW.description, OLD.description);
-        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
-
-        IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore THEN
-          RETURN NULL;
-        END IF;
-
-        INSERT INTO users_history (id, edited_at, edited_by, description, avatar)
-        VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.description, OLD.avatar);
-
-        RETURN NEW;
-
-      ELSE
-        RETURN NULL;
-      END IF;
+      RETURN NEW;
 
     END;
   $$ LANGUAGE plpgsql;
-  CREATE TRIGGER functions BEFORE INSERT OR UPDATE OR DELETE
-  ON users FOR EACH ROW EXECUTE PROCEDURE users_functions ();
+
+  CREATE FUNCTION users_update () RETURNS TRIGGER AS $$
+    BEGIN
+
+      NEW.edited_at = now();
+      NEW.description = COALESCE(NEW.description, OLD.description);
+      NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+
+      IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore THEN
+        RETURN NULL;
+      END IF;
+
+      INSERT INTO users_history (id, edited_at, edited_by, description, avatar)
+      VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.description, OLD.avatar);
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER insert BEFORE INSERT ON users FOR EACH ROW EXECUTE PROCEDURE users_insert ();
+  CREATE TRIGGER update BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE users_update ();
 
   CREATE FUNCTION users_create (
     username      TEXT,

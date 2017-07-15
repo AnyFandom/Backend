@@ -53,44 +53,38 @@ upgrade: |
     avatar      TEXT         NOT NULL
   );
   
-  CREATE FUNCTION fandoms_functions () RETURNS TRIGGER AS $$
+  CREATE FUNCTION fandoms_insert () RETURNS TRIGGER AS $$
     BEGIN
 
-      IF TG_OP = 'INSERT' THEN
+      NEW.edited_at = NEW.created_at;
 
-        NEW.edited_at = NEW.created_at;
-
-        RETURN NEW;
-
-      ELSIF TG_OP = 'UPDATE' THEN
-
-        NEW.id = OLD.id;
-        NEW.created_at = OLD.created_at;
-        NEW.url = OLD.url;
-
-        NEW.edited_at = now();
-        NEW.title = COALESCE(NEW.title, OLD.title);
-        NEW.description = COALESCE(NEW.description, OLD.description);
-        NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
-
-        IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore THEN
-          RETURN NULL;
-        END IF;
-
-        INSERT INTO fandoms_history (id, edited_at, edited_by, title, description, avatar)
-        VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.title, OLD.description, OLD.avatar);
-
-        RETURN NEW;
-
-      ELSE
-        RETURN NULL;
-      END IF;
+      RETURN NEW;
 
     END;
   $$ LANGUAGE plpgsql;
 
-  CREATE TRIGGER functions BEFORE INSERT OR UPDATE OR DELETE
-  ON fandoms FOR EACH ROW EXECUTE PROCEDURE fandoms_functions ();
+  CREATE FUNCTION fandoms_update () RETURNS TRIGGER AS $$
+    BEGIN
+
+      NEW.edited_at = now();
+      NEW.title = COALESCE(NEW.title, OLD.title);
+      NEW.description = COALESCE(NEW.description, OLD.description);
+      NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
+
+      IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore THEN
+        RETURN NULL;
+      END IF;
+
+      INSERT INTO fandoms_history (id, edited_at, edited_by, title, description, avatar)
+      VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.title, OLD.description, OLD.avatar);
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER insert BEFORE INSERT ON fandoms FOR EACH ROW EXECUTE PROCEDURE fandoms_insert ();
+  CREATE TRIGGER update BEFORE UPDATE ON fandoms FOR EACH ROW EXECUTE PROCEDURE fandoms_update ();
 
   CREATE FUNCTION fandoms_create (
     user_id     BIGINT,
