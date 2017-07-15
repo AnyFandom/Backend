@@ -6,7 +6,8 @@ from ..utils.web import BaseView, json_response, validators as v
 
 __all__ = ('BlogList', 'Blog', 'BlogHistory',
            'BlogModerList', 'BlogModer',
-           'BlogBannedList', 'BlogBanned')
+           'BlogBannedList', 'BlogBanned',
+           'BlogPostList', 'BlogPost')
 
 
 class BlogList(BaseView):
@@ -87,3 +88,22 @@ class BlogBanned(BaseView):
         await (await (await m.Blog.id_u(self.request)).bans_id_u(
             self.request)).delete()
 
+
+class BlogPostList(BaseView):
+    @json_response
+    async def get(self):
+        return await (await m.Blog.id_u(self.request)).posts_select()
+
+    @json_response
+    @v.get_body(v.posts.insert)
+    async def post(self, body):
+        new_id = await (await m.Blog.id_u(self.request)).posts_insert(body)
+        loc = '/blogs/%i' % new_id
+
+        return {'Location': loc}, 201, {'Location': loc}
+
+
+class BlogPost(BaseView):
+    @json_response
+    async def get(self):
+        return await (await m.Blog.id_u(self.request)).posts_id_u(self.request)

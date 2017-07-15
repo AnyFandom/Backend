@@ -9,6 +9,8 @@ from . import checks as C
 from .base import Obj, SelectResult
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, FandomUrlAlreadyTaken)
+from .blogs import Blog
+from .posts import Post
 
 __all__ = ('FandomModer', 'FandomBanned', 'Fandom')
 
@@ -221,9 +223,6 @@ class FandomBanned(Obj):
         )
 
 
-from .blogs import Blog  # noqa
-
-
 class Fandom(Obj):
     _sqls = dict(
         select="SELECT * FROM fandoms %s ORDER BY id ASC",
@@ -393,3 +392,20 @@ class Fandom(Obj):
 
         return await Blog.insert(
             self._conn, self.id, self._uid, fields)
+
+    # Posts
+
+    async def posts_id_u(self, request) -> Post:
+        post = request.match_info['post']
+
+        try:
+            return (await self.posts_select(post))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
+    async def posts_select(self, *target_ids: Union[int, str]
+                           ) -> Tuple[Post, ...]:
+
+        return await Post.select(
+            self._conn, self._uid, 0, self.id, *target_ids)
+

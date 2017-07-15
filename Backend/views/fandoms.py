@@ -7,7 +7,8 @@ from ..utils.web import BaseView, json_response, validators as v
 __all__ = ('FandomList', 'Fandom', 'FandomHistory',
            'FandomModerList', 'FandomModer',
            'FandomBannedList', 'FandomBanned',
-           'FandomBlogList', 'FandomBlog')
+           'FandomBlogList', 'FandomBlog',
+           'FandomPostList', 'FandomPost')
 
 
 class FandomList(BaseView):
@@ -119,4 +120,17 @@ class FandomBlog(BaseView):
     @json_response
     async def get(self):
         return await (await m.Fandom.id_u(self.request)).blogs_id_u(
+            self.request)
+
+
+class FandomPostList(BaseView):
+    @json_response
+    async def get(self):
+        return await (await m.Fandom.id_u(self.request)).posts_select()
+
+
+class FandomPost(BaseView):
+    @json_response
+    async def get(self):
+        return await (await m.Fandom.id_u(self.request)).posts_id_u(
             self.request)

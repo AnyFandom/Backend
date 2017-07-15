@@ -1,0 +1,110 @@
+description: Create posts
+
+revision: e430be9a4bf1
+down_revision: 981d60aa2a57
+
+upgrade: |
+  CREATE SEQUENCE post_id_seq;
+  CREATE TABLE posts (
+    PRIMARY KEY (id),
+
+    id         BIGINT                    NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_at  TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by  BIGINT                    NOT NULL,
+    blog_id    BIGINT                    NOT NULL,
+    fandom_id  BIGINT                    NOT NULL,
+    owner      BIGINT                    NOT NULL,
+    title      TEXT                      NOT NULL,
+    content    TEXT                      NOT NULL
+  );
+
+  CREATE TABLE posts_history (
+    PRIMARY KEY (id),
+
+    id         BIGINT                    NOT NULL,
+    edited_at  TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by  BIGINT                    NOT NULL,
+    title      TEXT                      NOT NULL,
+    content    TEXT                      NOT NULL
+  );
+
+  CREATE FUNCTION posts_insert () RETURNS TRIGGER AS $$
+    BEGIN
+
+      NEW.edited_at = NEW.created_at;
+      NEW.edited_by = NEW.owner;
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE FUNCTION posts_update () RETURNS TRIGGER AS $$
+    BEGIN
+
+      NEW.edited_at = now();
+      NEW.title = COALESCE(NEW.title, OLD.title);
+      NEW.content = COALESCE(NEW.content, OLD.content);
+
+      IF hstore(NEW) - hstore(OLD) - ARRAY['edited_by', 'edited_at'] = ''::hstore THEN
+        RETURN NULL;
+      END IF;
+
+      INSERT INTO posts_history (id, edited_at, edited_by, title, content)
+      VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.title, OLD.content);
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER insert BEFORE INSERT ON posts FOR EACH ROW EXECUTE PROCEDURE posts_insert ();
+  CREATE TRIGGER update BEFORE UPDATE ON posts FOR EACH ROW EXECUTE PROCEDURE posts_update ();
+
+  CREATE FUNCTION posts_create (
+    user_id   BIGINT,
+    blog_id   BIGINT,
+    fandom_id BIGINT,
+    title     TEXT,
+    content   TEXT
+  ) RETURNS BIGINT AS $$
+
+      INSERT INTO posts (id, blog_id, fandom_id, owner, title, content)
+      VALUES (nextval('post_id_seq'), blog_id, fandom_id, user_id, title, content)
+      RETURNING id;
+
+  $$ LANGUAGE sql;
+
+  CREATE FUNCTION posts_history (
+    target_id BIGINT
+  ) RETURNS SETOF posts AS $$
+
+    SELECT * FROM posts WHERE id = target_id
+    UNION
+    SELECT
+      p.id,
+      p.created_at,
+      ph.edited_at,
+      ph.edited_by,
+      p.blog_id,
+      p.fandom_id,
+      p.owner,
+      ph.title,
+      ph.content
+    FROM posts_history AS ph
+    INNER JOIN posts AS p ON ph.id = p.id
+    WHERE ph.id = target_id;
+
+  $$ LANGUAGE sql;
+
+downgrade: |
+  DROP FUNCTION posts_history (BIGINT);
+  DROP FUNCTION posts_create (BIGINT, BIGINT, BIGINT, TEXT, TEXT);
+  DROP TRIGGER update ON posts;
+  DROP TRIGGER insert ON posts;
+  DROP FUNCTION posts_update ();
+  DROP FUNCTION posts_insert ();
+  DROP TABLE posts_history;
+  DROP TABLE posts;
+  DROP SEQUENCE post_id_seq;

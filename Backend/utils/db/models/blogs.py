@@ -9,6 +9,7 @@ from . import checks as C
 from .base import Obj, SelectResult
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, UserIsOwner, BlogUrlAlreadyTaken)
+from .posts import Post
 
 __all__ = ('BlogModer', 'BlogBanned', 'Blog')
 
@@ -399,3 +400,24 @@ class Blog(Obj):
             self._conn, self._uid, self.id, self.attrs['fandom_id'], fields)
 
         return self.id, fields['user_id']
+
+    # Posts
+
+    async def posts_id_u(self, request) -> Post:
+        post = request.match_info['post']
+
+        try:
+            return (await self.posts_select(post))[0]
+        except (IndexError, ValueError):
+            raise ObjectNotFound
+
+    async def posts_select(self, *target_ids: Union[int, str]
+                           ) -> Tuple[Post, ...]:
+
+        return await Post.select(
+            self._conn, self._uid, self.id, 0, *target_ids)
+
+    async def posts_insert(self, fields: dict) -> int:
+
+        return await Post.insert(
+            self._conn, self._uid, self.id, self.attrs['fandom_id'], fields)
