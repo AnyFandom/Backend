@@ -272,9 +272,6 @@ class Blog(Obj):
                "title=$3, description=$4, avatar=$5 WHERE id=$2",
 
         # args: blog_id
-        delete="DELETE FROM blogs WHERE id=$1",
-
-        # args: blog_id
         history="SELECT * FROM blogs_history($1) ORDER BY edited_at DESC",
 
         # args: user_id, blog_id
@@ -297,7 +294,7 @@ class Blog(Obj):
         uid = request.uid
 
         try:
-            return (await cls.select(conn, 0, uid, blog))[0]
+            return (await cls.select(conn, uid, 0, blog))[0]
         except (IndexError, ValueError):
             raise ObjectNotFound
 
@@ -326,6 +323,11 @@ class Blog(Obj):
             resp = await conn.fetch(
                 cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
                 tuple(map(int, target_ids)))
+
+        # На вход подан fandom_id
+        elif fandom_id:
+            resp = await conn.fetch(
+                cls._sqls['select'] % 'WHERE fandom_id = $1', fandom_id)
 
         # На вход не подано ничего
         else:
