@@ -92,7 +92,7 @@ upgrade: |
     target_id BIGINT
   ) RETURNS SETOF users AS $$
 
-    SELECT * FROM users WHERE id = 3
+    SELECT * FROM users WHERE id = target_id
     UNION
     SELECT
       u.id,
@@ -104,7 +104,7 @@ upgrade: |
       uh.avatar
     FROM users_history AS uh
     INNER JOIN users AS u ON uh.id = u.id
-    WHERE uh.id = 3;
+    WHERE uh.id = target_id;
 
   $$ LANGUAGE sql;
 
