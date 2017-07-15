@@ -111,8 +111,10 @@ upgrade: |
 downgrade: |
   DROP FUNCTION users_history (BIGINT);
   DROP FUNCTION users_create (TEXT, TEXT);
-  DROP TRIGGER functions ON users;
-  DROP FUNCTION users_functions ();
+  DROP TRIGGER update ON users;
+  DROP TRIGGER insert ON users;
+  DROP FUNCTION users_update ();
+  DROP FUNCTION users_insert ();
   DROP TABLE users_history;
   DROP TABLE users;
   DROP SEQUENCE user_id_seq;

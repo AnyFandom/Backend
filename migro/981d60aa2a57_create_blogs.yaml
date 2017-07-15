@@ -150,8 +150,10 @@ downgrade: |
   DROP FUNCTION blog_moders_update ();
   DROP FUNCTION blogs_history (BIGINT);
   DROP FUNCTION blogs_create (BIGINT, BIGINT, CITEXT, TEXT, TEXT, TEXT);
-  DROP TRIGGER functions ON blogs;
-  DROP FUNCTION blogs_functions ();
+  DROP TRIGGER update ON blogs;
+  DROP TRIGGER insert ON blogs;
+  DROP FUNCTION blogs_update ();
+  DROP FUNCTION blogs_insert ();
   DROP TABLE blogs_history;
   DROP TABLE blogs;
   DROP SEQUENCE blog_id_seq;

@@ -153,9 +153,10 @@ downgrade: |
   DROP FUNCTION fandom_moders_update ();
   DROP FUNCTION fandoms_history (BIGINT);
   DROP FUNCTION fandoms_create (BIGINT, CITEXT, TEXT, TEXT, TEXT);
-  DROP FUNCTION fandoms_create (BIGINT, CITEXT, TEXT, TEXT, TEXT);
-  DROP TRIGGER functions ON fandoms;
-  DROP FUNCTION fandoms_functions ();
+  DROP TRIGGER update ON fandoms;
+  DROP TRIGGER insert ON fandoms;
+  DROP FUNCTION fandoms_update ();
+  DROP FUNCTION fandoms_insert ();
   DROP TABLE fandoms_history;
   DROP TABLE fandoms;
   DROP SEQUENCE fandom_id_seq;
