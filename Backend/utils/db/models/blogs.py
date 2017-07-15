@@ -361,7 +361,7 @@ class Blog(Obj):
             not await BlogModer.check_exists(
                 self._conn, self._uid, self.id, 'edit_b') and
             not await FandomModer.check_exists(
-                self._conn, self._uid, self.id, 'edit_b') and
+                self._conn, self._uid, self.attrs['fandom_id'], 'edit_b') and
             not await User.check_admin(self._conn, self._uid)
         ):
             return Forbidden
