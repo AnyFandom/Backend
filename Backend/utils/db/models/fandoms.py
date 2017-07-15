@@ -245,7 +245,7 @@ from .blogs import Blog  # noqa
 
 class Fandom(Obj):
     _sqls = dict(
-        select="SELECT * FROM fandoms %s ORDER BY id",
+        select="SELECT * FROM fandoms %s ORDER BY id ASC",
 
         # args: user_id, url, title, description, avatar
         insert="SELECT fandoms_create($1, $2, $3, $4, $5)",
@@ -255,7 +255,7 @@ class Fandom(Obj):
                "title=$3, description=$4, avatar=$5 WHERE id=$2",
 
         # args: fandom_id
-        history="SELECT * FROM fandoms_history($1) ORDER BY id, edited_at ASC"
+        history="SELECT * FROM fandoms_history($1) ORDER BY edited_at DESC"
     )
 
     _type = 'fandoms'

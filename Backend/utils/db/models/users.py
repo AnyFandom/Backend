@@ -20,7 +20,7 @@ class User(Obj):
                "description=$3, avatar=$4 WHERE id=$2",
 
         # args: user_id
-        history="SELECT * FROM users_history ($1) ORDER BY id, edited_at ASC",
+        history="SELECT * FROM users_history ($1) ORDER BY edited_at DESC",
 
         # args: user_id
         check_exists="SELECT EXISTS (SELECT 1 FROM users WHERE id=$1)",

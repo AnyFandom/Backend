@@ -10,46 +10,32 @@ upgrade: |
 
     id            BIGINT                         NOT NULL,
     username      CITEXT                         NOT NULL,
-    password_hash VARCHAR(130)                   NOT NULL,
+    password_hash TEXT                           NOT NULL,
     random        UUID DEFAULT gen_random_uuid() NOT NULL
   );
 
-  CREATE SEQUENCE us_id_seq;
-  CREATE TABLE user_statics (
+  CREATE SEQUENCE user_id_seq;
+  CREATE TABLE users (
     PRIMARY KEY (id),
     UNIQUE (username),
 
-    id         BIGINT                    NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-    username   CITEXT                    NOT NULL
-  );
-
-  CREATE TABLE user_versions (
-    PRIMARY KEY (id, edited_at),
-
     id          BIGINT                    NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT now() NOT NULL,
     edited_at   TIMESTAMPTZ DEFAULT now() NOT NULL,
     edited_by   BIGINT                    NOT NULL,
+    username    CITEXT                    NOT NULL,
     description TEXT DEFAULT ''           NOT NULL,
-    avatar      VARCHAR(64) DEFAULT ''    NOT NULL
+    avatar      TEXT DEFAULT ''           NOT NULL
   );
 
-  CREATE VIEW users AS (
-    SELECT
-      us.id,
-      us.created_at,
-      uv.edited_at,
-      uv.edited_by,
-      us.username,
-      uv.description,
-      uv.avatar
-    FROM user_statics AS us
-    INNER JOIN user_versions AS uv ON uv.id = us.id
-      AND uv.edited_at = (
-        SELECT max(uv2.edited_at)
-        FROM user_versions AS uv2
-        WHERE uv2.id = us.id
-      )
+  CREATE TABLE users_history (
+    PRIMARY KEY (id, edited_at),
+
+    id          BIGINT      NOT NULL,
+    edited_at   TIMESTAMPTZ NOT NULL,
+    edited_by   BIGINT      NOT NULL,
+    description TEXT        NOT NULL,
+    avatar      TEXT        NOT NULL
   );
 
   CREATE FUNCTION users_functions () RETURNS TRIGGER AS $$
@@ -57,16 +43,18 @@ upgrade: |
 
       IF TG_OP = 'INSERT' THEN
 
-        INSERT INTO user_statics (id, created_at, username)
-        VALUES (NEW.id, NEW.created_at, NEW.username);
-
-        INSERT INTO user_versions (id, edited_at, edited_by)
-        VALUES (NEW.id, NEW.created_at, NEW.id);
+        NEW.edited_at = NEW.created_at;
+        NEW.edited_by = NEW.id;
 
         RETURN NEW;
 
       ELSIF TG_OP = 'UPDATE' THEN
 
+        NEW.id = OLD.id;
+        NEW.created_at = OLD.created_at;
+        NEW.username = OLD.username;
+
+        NEW.edited_at = now();
         NEW.description = COALESCE(NEW.description, OLD.description);
         NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
 
@@ -74,8 +62,8 @@ upgrade: |
           RETURN NULL;
         END IF;
 
-        INSERT INTO user_versions (id, edited_at, edited_by, description, avatar)
-        VALUES (OLD.id, now(), NEW.edited_by, NEW.description, NEW.avatar);
+        INSERT INTO users_history (id, edited_at, edited_by, description, avatar)
+        VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.description, OLD.avatar);
 
         RETURN NEW;
 
@@ -85,23 +73,22 @@ upgrade: |
 
     END;
   $$ LANGUAGE plpgsql;
-
-  CREATE TRIGGER functions INSTEAD OF INSERT OR UPDATE OR DELETE
+  CREATE TRIGGER functions BEFORE INSERT OR UPDATE OR DELETE
   ON users FOR EACH ROW EXECUTE PROCEDURE users_functions ();
 
   CREATE FUNCTION users_create (
-    username      VARCHAR(120),
-    password_hash VARCHAR(130)
+    username      TEXT,
+    password_hash TEXT
   ) RETURNS BIGINT AS $$
     BEGIN
 
-      INSERT INTO users (id, created_at, username)
-      VALUES (nextval('us_id_seq'), now(), username);
+      INSERT INTO users (id, username)
+      VALUES (nextval('user_id_seq'), username);
 
       INSERT INTO auth (id, username, password_hash)
-      VALUES (currval('us_id_seq'), username, password_hash);
+      VALUES (currval('user_id_seq'), username, password_hash);
 
-      RETURN currval('us_id_seq');
+      RETURN currval('user_id_seq');
 
     END;
   $$ LANGUAGE plpgsql;
@@ -110,27 +97,28 @@ upgrade: |
     target_id BIGINT
   ) RETURNS SETOF users AS $$
 
+    SELECT * FROM users WHERE id = 3
+    UNION
     SELECT
-      us.id,
-      us.created_at,
-      uv.edited_at,
-      uv.edited_by,
-      us.username,
-      uv.description,
-      uv.avatar
-    FROM user_statics AS us
-    INNER JOIN user_versions AS uv ON uv.id = us.id
-    WHERE us.id = target_id;
+      u.id,
+      u.created_at,
+      uh.edited_at,
+      uh.edited_by,
+      u.username,
+      uh.description,
+      uh.avatar
+    FROM users_history AS uh
+    INNER JOIN users AS u ON uh.id = u.id
+    WHERE uh.id = 3;
 
   $$ LANGUAGE sql;
 
 downgrade: |
   DROP FUNCTION users_history (BIGINT);
-  DROP FUNCTION users_create (VARCHAR, VARCHAR);
+  DROP FUNCTION users_create (TEXT, TEXT);
   DROP TRIGGER functions ON users;
   DROP FUNCTION users_functions ();
-  DROP VIEW users;
-  DROP TABLE user_versions;
-  DROP TABLE user_statics;
-  DROP SEQUENCE us_id_seq;
+  DROP TABLE users_history;
+  DROP TABLE users;
+  DROP SEQUENCE user_id_seq;
   DROP TABLE auth;

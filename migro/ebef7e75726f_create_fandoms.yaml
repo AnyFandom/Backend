@@ -21,67 +21,54 @@ upgrade: |
   CREATE TABLE fandom_bans (
     PRIMARY KEY (user_id, target_id), 
     
-    user_id   BIGINT      NOT NULL,
-    target_id BIGINT      NOT NULL,
-    set_by    BIGINT      NOT NULL,
-    reason    VARCHAR(32) NOT NULL
+    user_id   BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    set_by    BIGINT NOT NULL,
+    reason    TEXT   NOT NULL
   );
 
-  CREATE SEQUENCE fs_id_seq;
-  CREATE TABLE fandom_statics (
+  CREATE SEQUENCE fandom_id_seq;
+  CREATE TABLE fandoms (
     PRIMARY KEY (id),
     UNIQUE (url),
     
-    id         BIGINT                    NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-    url        CITEXT                    NOT NULL
-  );
-  
-  CREATE TABLE fandom_versions (
-    PRIMARY KEY (id, edited_at),
-    
     id          BIGINT                    NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT now() NOT NULL,
     edited_at   TIMESTAMPTZ DEFAULT now() NOT NULL,
     edited_by   BIGINT                    NOT NULL,
-    title       VARCHAR(120)              NOT NULL,
+    url         CITEXT                    NOT NULL,
+    title       TEXT                      NOT NULL,
     description TEXT DEFAULT ''           NOT NULL,
-    avatar      VARCHAR(64) DEFAULT ''    NOT NULL
-  );
-  
-  CREATE VIEW fandoms AS (
-    SELECT
-      fs.id,
-      fs.created_at,
-      fv.edited_at,
-      fv.edited_by,
-      fv.title,
-      fs.url,
-      fv.description,
-      fv.avatar
-    FROM fandom_statics as fs
-    INNER JOIN fandom_versions AS fv ON fv.id = fs.id
-      AND fv.edited_at = (
-        SELECT max(fv2.edited_at)
-        FROM fandom_versions AS fv2
-        WHERE fv2.id = fs.id
-      )
+    avatar      TEXT DEFAULT ''           NOT NULL
   );
 
+  CREATE TABLE fandoms_history (
+    PRIMARY KEY (id, edited_at),
+    
+    id          BIGINT       NOT NULL,
+    edited_at   TIMESTAMPTZ  NOT NULL,
+    edited_by   BIGINT       NOT NULL,
+    title       TEXT         NOT NULL,
+    description TEXT         NOT NULL,
+    avatar      TEXT         NOT NULL
+  );
+  
   CREATE FUNCTION fandoms_functions () RETURNS TRIGGER AS $$
     BEGIN
 
       IF TG_OP = 'INSERT' THEN
 
-        INSERT INTO fandom_statics (id, created_at, url)
-        VALUES (NEW.id, NEW.created_at, NEW.url);
-
-        INSERT INTO fandom_versions (id, edited_at, edited_by, title, description, avatar)
-        VALUES (NEW.id, NEW.created_at, NEW.id, NEW.title, NEW.description, NEW.avatar);
+        NEW.edited_at = NEW.created_at;
 
         RETURN NEW;
 
       ELSIF TG_OP = 'UPDATE' THEN
 
+        NEW.id = OLD.id;
+        NEW.created_at = OLD.created_at;
+        NEW.url = OLD.url;
+
+        NEW.edited_at = now();
         NEW.title = COALESCE(NEW.title, OLD.title);
         NEW.description = COALESCE(NEW.description, OLD.description);
         NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
@@ -90,8 +77,8 @@ upgrade: |
           RETURN NULL;
         END IF;
 
-        INSERT INTO fandom_versions (id, edited_at, edited_by, title, description, avatar)
-        VALUES (OLD.id, now(), NEW.edited_by, NEW.title, NEW.description, NEW.avatar);
+        INSERT INTO fandoms_history (id, edited_at, edited_by, title, description, avatar)
+        VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.title, OLD.description, OLD.avatar);
 
         RETURN NEW;
 
@@ -102,26 +89,26 @@ upgrade: |
     END;
   $$ LANGUAGE plpgsql;
 
-  CREATE TRIGGER functions INSTEAD OF INSERT OR UPDATE OR DELETE
+  CREATE TRIGGER functions BEFORE INSERT OR UPDATE OR DELETE
   ON fandoms FOR EACH ROW EXECUTE PROCEDURE fandoms_functions ();
 
   CREATE FUNCTION fandoms_create (
     user_id     BIGINT,
     url         CITEXT,
-    title       VARCHAR(120),
+    title       TEXT,
     description TEXT,
-    avatar      VARCHAR(64)
+    avatar      TEXT
   ) RETURNS BIGINT AS $$
     BEGIN
 
-      INSERT INTO fandoms (id, created_at, url, title, description, avatar)
-      VALUES (nextval('fs_id_seq'), now(), url, title, description, avatar);
+      INSERT INTO fandoms (id, edited_by, url, title, description, avatar)
+      VALUES (nextval('fandom_id_seq'), user_id, url, title, description, avatar);
 
       INSERT INTO fandom_moders
-      VALUES (user_id, currval('fs_id_seq'),
+      VALUES (user_id, currval('fandom_id_seq'),
               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE);
 
-      RETURN currval('fs_id_seq');
+      RETURN currval('fandom_id_seq');
 
     END;
   $$ LANGUAGE plpgsql;
@@ -130,18 +117,20 @@ upgrade: |
     target_id BIGINT
   ) RETURNS SETOF fandoms AS $$
 
+    SELECT * FROM fandoms WHERE id = target_id
+    UNION
     SELECT
-      fs.id,
-      fs.created_at,
-      fv.edited_at,
-      fv.edited_by,
-      fv.title,
-      fs.url,
-      fv.description,
-      fv.avatar
-    FROM fandom_statics as fs
-    INNER JOIN fandom_versions AS fv ON fv.id = fs.id
-    WHERE fs.id = target_id;
+      f.id,
+      f.created_at,
+      fh.edited_at,
+      fh.edited_by,
+      f.url,
+      fh.title,
+      fh.description,
+      fh.avatar
+    FROM fandoms_history AS fh
+    INNER JOIN fandoms AS f ON fh.id = f.id
+    WHERE fh.id = target_id;
 
   $$ LANGUAGE sql;
 
@@ -169,12 +158,12 @@ downgrade: |
   DROP TRIGGER update ON fandom_moders;
   DROP FUNCTION fandom_moders_update ();
   DROP FUNCTION fandoms_history (BIGINT);
-  DROP FUNCTION fandoms_create (BIGINT, CITEXT, VARCHAR, TEXT, VARCHAR);
+  DROP FUNCTION fandoms_create (BIGINT, CITEXT, TEXT, TEXT, TEXT);
+  DROP FUNCTION fandoms_create (BIGINT, CITEXT, TEXT, TEXT, TEXT);
   DROP TRIGGER functions ON fandoms;
   DROP FUNCTION fandoms_functions ();
-  DROP VIEW fandoms;
-  DROP TABLE fandom_versions;
-  DROP TABLE fandom_statics;
-  DROP SEQUENCE fs_id_seq;
+  DROP TABLE fandoms_history;
+  DROP TABLE fandoms;
+  DROP SEQUENCE fandom_id_seq;
   DROP TABLE fandom_bans;
   DROP TABLE fandom_moders;

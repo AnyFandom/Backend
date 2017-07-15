@@ -20,54 +20,38 @@ upgrade: |
   CREATE TABLE blog_bans (
     PRIMARY KEY (user_id, target_id),
 
-    user_id   BIGINT      NOT NULL,
-    target_id BIGINT      NOT NULL,
-    set_by    BIGINT      NOT NULL,
-    reason    VARCHAR(64) NOT NULL
+    user_id   BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    set_by    BIGINT NOT NULL,
+    reason    TEXT   NOT NULL
   );
 
-  CREATE SEQUENCE bs_id_seq;
-  CREATE TABLE blog_statics (
+  CREATE SEQUENCE blog_id_seq;
+  CREATE TABLE blogs (
     PRIMARY KEY (id),
     UNIQUE (fandom_id, url),
 
-    id         BIGINT                    NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-    owner      BIGINT                    NOT NULL,
-    fandom_id  BIGINT                    NOT NULL,
-    url        CITEXT                    NOT NULL
+    id          BIGINT                    NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_at   TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by   BIGINT                    NOT NULL,
+    fandom_id   BIGINT                    NOT NULL,
+    owner       BIGINT                    NOT NULL,
+    url         CITEXT                    NOT NULL,
+    title       TEXT                      NOT NULL,
+    description TEXT DEFAULT ''           NOT NULL,
+    avatar      TEXT DEFAULT ''           NOT NULL
   );
 
-  CREATE TABLE blog_versions (
+  CREATE TABLE blogs_history (
     PRIMARY KEY (id, edited_at),
 
     id          BIGINT                    NOT NULL,
     edited_at   TIMESTAMPTZ DEFAULT now() NOT NULL,
     edited_by   BIGINT                    NOT NULL,
-    title       VARCHAR(120)              NOT NULL,
-    description TEXT DEFAULT ''           NOT NULL,
-    avatar      VARCHAR(64) DEFAULT ''    NOT NULL
-  );
-
-  CREATE VIEW blogs AS (
-    SELECT
-      bs.id,
-      bs.created_at,
-      bs.fandom_id,
-      bs.owner,
-      bv.edited_at,
-      bv.edited_by,
-      bv.title,
-      bs.url,
-      bv.description,
-      bv.avatar
-    FROM blog_statics AS bs
-    INNER JOIN blog_versions AS bv ON bv.id = bs.id
-      AND bv.edited_at = (
-        SELECT max(bv2.edited_at)
-        FROM blog_versions AS bv2
-        WHERE bv2.id = bs.id
-      )
+    title       TEXT                      NOT NULL,
+    description TEXT                      NOT NULL,
+    avatar      TEXT                      NOT NULL
   );
 
   CREATE FUNCTION blogs_functions () RETURNS TRIGGER AS $$
@@ -75,16 +59,20 @@ upgrade: |
 
       IF TG_OP = 'INSERT' THEN
 
-        INSERT INTO blog_statics (id, created_at, owner, fandom_id, url)
-        VALUES (NEW.id, NEW.created_at, NEW.owner, NEW.fandom_id, NEW.url);
-
-        INSERT INTO blog_versions (id, edited_at, edited_by, title, description, avatar)
-        VALUES (NEW.id, NEW.created_at, NEW.id, NEW.title, NEW.description, NEW.avatar);
+        NEW.edited_at = NEW.created_at;
+        NEW.edited_by = NEW.owner;
 
         RETURN NEW;
 
       ELSIF TG_OP = 'UPDATE' THEN
 
+        NEW.id = OLD.id;
+        NEW.created_at = OLD.created_at;
+        NEW.fandom_id = OLD.fandom.id;
+        NEW.owner = OLD.owner;
+        NEW.url = OLD.url;
+
+        NEW.edited_at = now();
         NEW.title = COALESCE(NEW.title, OLD.title);
         NEW.description = COALESCE(NEW.description, OLD.description);
         NEW.avatar = COALESCE(NEW.avatar, OLD.avatar);
@@ -93,8 +81,8 @@ upgrade: |
           RETURN NULL;
         END IF;
 
-        INSERT INTO blog_versions (id, edited_at, edited_by, title, description, avatar)
-        VALUES (OLD.id, now(), NEW.edited_by, NEW.title, NEW.description, NEW.avatar);
+        INSERT INTO blogs_history (id, edited_at, edited_by, title, description, avatar)
+        VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.title, OLD.description, OLD.avatar);
 
         RETURN NEW;
 
@@ -105,20 +93,20 @@ upgrade: |
     END;
   $$ LANGUAGE plpgsql;
 
-  CREATE TRIGGER functions INSTEAD OF INSERT OR UPDATE OR DELETE
+  CREATE TRIGGER functions BEFORE INSERT OR UPDATE OR DELETE
   ON blogs FOR EACH ROW EXECUTE PROCEDURE blogs_functions ();
 
   CREATE FUNCTION blogs_create (
     user_id     BIGINT,
     fandom_id   BIGINT,
     url         CITEXT,
-    title       VARCHAR(120),
+    title       TEXT,
     description TEXT,
-    avatar      VARCHAR(64)
+    avatar      TEXT
   ) RETURNS BIGINT AS $$
 
-      INSERT INTO blogs (id, created_at, url, fandom_id, title, description, avatar, owner)
-      VALUES (nextval('bs_id_seq'), now(), url, fandom_id, title, description, avatar, user_id)
+      INSERT INTO blogs (id, url, fandom_id, title, description, avatar, owner)
+      VALUES (nextval('blog_id_seq'), url, fandom_id, title, description, avatar, user_id)
       RETURNING id;
 
   $$ LANGUAGE sql;
@@ -127,20 +115,22 @@ upgrade: |
     target_id BIGINT
   ) RETURNS SETOF blogs AS $$
 
+    SELECT * FROM blogs WHERE id = target_id
+    UNION
     SELECT
-      bs.id,
-      bs.created_at,
-      bs.fandom_id,
-      bs.owner,
-      bv.edited_at,
-      bv.edited_by,
-      bv.title,
-      bs.url,
-      bv.description,
-      bv.avatar
-    FROM blog_statics AS bs
-    INNER JOIN blog_versions AS bv ON bv.id = bs.id
-    WHERE bs.id = target_id;
+      b.id,
+      b.created_at,
+      bh.edited_at,
+      bh.edited_by,
+      b.fandom_id,
+      b.owner,
+      b.url,
+      bh.title,
+      bh.description,
+      bh.avatar
+    FROM blogs_history AS bh
+    INNER JOIN blogs AS b ON bh.id = b.id
+    WHERE bh.id = target_id;
 
   $$ LANGUAGE sql;
 
@@ -166,12 +156,11 @@ downgrade: |
   DROP TRIGGER update ON blog_moders;
   DROP FUNCTION blog_moders_update ();
   DROP FUNCTION blogs_history (BIGINT);
-  DROP FUNCTION blogs_create (BIGINT, BIGINT, CITEXT, VARCHAR, TEXT, VARCHAR);
+  DROP FUNCTION blogs_create (BIGINT, BIGINT, CITEXT, TEXT, TEXT, TEXT);
   DROP TRIGGER functions ON blogs;
   DROP FUNCTION blogs_functions ();
-  DROP VIEW blogs;
-  DROP TABLE blog_versions;
-  DROP TABLE blog_statics;
-  DROP SEQUENCE bs_id_seq;
+  DROP TABLE blogs_history;
+  DROP TABLE blogs;
+  DROP SEQUENCE blog_id_seq;
   DROP TABLE blog_bans;
   DROP TABLE blog_moders;

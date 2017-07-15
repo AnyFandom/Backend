@@ -262,7 +262,7 @@ class BlogBanned(Obj):
 
 class Blog(Obj):
     _sqls = dict(
-        select="SELECT * FROM blogs %s ORDER BY id",
+        select="SELECT * FROM blogs %s ORDER BY id ASC",
 
         # args: user_id, fandom_id, url, title, description, avatar
         insert="SELECT blogs_create($1, $2, $3, $4, $5, $6)",
@@ -275,7 +275,7 @@ class Blog(Obj):
         delete="DELETE FROM blogs WHERE id=$1",
 
         # args: blog_id
-        history="SELECT * FROM blogs_history($1) ORDER BY id, edited_at ASC",
+        history="SELECT * FROM blogs_history($1) ORDER BY edited_at DESC",
 
         # args: user_id, blog_id
         check_owner="SELECT EXISTS (SELECT 1 FROM blogs "
