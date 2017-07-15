@@ -5,11 +5,10 @@ from typing import Union, Tuple
 
 import asyncpg
 
+from . import checks as C
 from .base import Obj, SelectResult
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, UserIsOwner, BlogUrlAlreadyTaken)
-from .users import User
-from .fandoms import FandomModer, FandomBanned
 
 __all__ = ('BlogModer', 'BlogBanned', 'Blog')
 
@@ -40,22 +39,9 @@ class BlogModer(Obj):
 
         # args: user_id, blog_id
         delete="DELETE FROM blog_moders WHERE user_id=$1 AND target_id=$2",
-
-        # args: user_id, blog_id
-        check_exists="SELECT EXISTS (SELECT 1 FROM blog_moders "
-                     "WHERE user_id=$1 AND target_id=$2 %s)"
     )
 
     _type = 'users'
-
-    @classmethod
-    async def check_exists(cls, conn: asyncpg.connection.Connection,
-                           user_id: int, blog_id: int,
-                           perm: str=None) -> bool:
-
-        return await conn.fetchval(
-            cls._sqls['check_exists'] % ('AND %s=TRUE' % perm) if perm else '',
-            user_id, blog_id)
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -82,27 +68,27 @@ class BlogModer(Obj):
 
         # Проверка
         if (
-            not await Blog.check_owner(
+            not await C.blog_owner(
                 conn, user_id, blog_id) and
-            not await BlogModer.check_exists(
+            not await C.blog_moder(
                 conn, user_id, blog_id, 'manage_b') and
-            not await User.check_admin(
+            not await C.admin(
                 conn, user_id)
         ):
             raise Forbidden
 
         # Существует ли юзер
-        if not await User.check_exists(conn, fields['user_id']):
+        if not await C.user(conn, fields['user_id']):
             raise ObjectNotFound
 
         # А не овнер ли он?
-        if await Blog.check_owner(conn, fields['user_id'], blog_id):
+        if await C.blog_owner(conn, fields['user_id'], blog_id):
             raise UserIsOwner('moder', 'blog')
 
         # А не забанен ли он?
-        if await BlogBanned.check_exists(conn, fields['user_id'], blog_id):
+        if await C.blog_banned(conn, fields['user_id'], blog_id):
             raise UserIsBanned('moder', 'blog')
-        if await FandomBanned.check_exists(conn, fields['user_id'], fandom_id):
+        if await C.fandom_banned(conn, fields['user_id'], fandom_id):
             raise UserIsBanned('moder', 'fandom')
 
         try:
@@ -118,11 +104,11 @@ class BlogModer(Obj):
 
         # Проверка
         if (
-            not await Blog.check_owner(
+            not await C.blog_owner(
                 self._conn, self._uid, self.id) and
-            not await BlogModer.check_exists(
+            not await C.blog_moder(
                 self._conn, self._uid, self.meta['blog_id'], 'manage_b') and
-            not await User.check_admin(
+            not await C.admin(
                 self._conn, self._uid)
         ):
             raise Forbidden
@@ -138,11 +124,11 @@ class BlogModer(Obj):
 
         # Проверка
         if (
-            not await Blog.check_owner(
+            not await C.blog_owner(
                 self._conn, self._uid, self.meta['blog_id']) and
-            not await BlogModer.check_exists(
+            not await C.blog_moder(
                 self._conn, self._uid, self.meta['blog_id'], 'manage_f') and
-            not await User.check_admin(
+            not await C.admin(
                 self._conn, self._uid)
         ):
             raise Forbidden
@@ -170,20 +156,9 @@ class BlogBanned(Obj):
 
         # args: user_id, blog_id
         delete="DELETE FROM blog_bans WHERE user_id=$1 AND target_id=$2",
-
-        # args: user_id, blog_id
-        check_exists="SELECT EXISTS (SELECT 1 FROM blog_bans "
-                     "WHERE user_id=$1 AND blog_id=$2)"
     )
 
     _type = 'users'
-
-    @classmethod
-    async def check_exists(cls, conn: asyncpg.connection.Connection,
-                           user_id: int, blog_id: int) -> bool:
-
-        return await conn.fetchval(
-            cls._sqls['check_exists'], user_id, blog_id)
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -209,23 +184,23 @@ class BlogBanned(Obj):
 
         # Проверка
         if (
-            not await Blog.check_owner(
+            not await C.blog_owner(
                 conn, user_id, blog_id) and
-            not await BlogModer.check_exists(
+            not await C.blog_moder(
                 conn, user_id, blog_id, 'manage_b') and
-            not await User.check_admin(
+            not await C.admin(
                 conn, user_id)
         ):
             raise Forbidden
 
         # Существует ли юзер
-        if not await User.check_exists(conn, fields['user_id']):
+        if not await C.user(conn, fields['user_id']):
             raise ObjectNotFound
 
         # А не модер ли он?
-        if await BlogModer.check_exists(conn, fields['user_id'], blog_id):
+        if await C.blog_moder(conn, fields['user_id'], blog_id):
             raise UserIsModer('ban', 'blog')
-        if await FandomModer.check_exists(conn, fields['user_id'], fandom_id):
+        if await C.fandom_moder(conn, fields['user_id'], fandom_id):
             raise UserIsModer('ban', 'fandom')
 
         try:
@@ -244,11 +219,11 @@ class BlogBanned(Obj):
 
         # Проверка
         if (
-            not await Blog.check_owner(
+            not await C.blog_owner(
                 self._conn, self._uid, self.meta['blog_id']) and
-            not await BlogModer.check_exists(
+            not await C.blog_moder(
                 self._conn, self._uid, self.meta['blog_id']) and
-            not await User.check_admin(
+            not await C.admin(
                 self._conn, self._uid)
         ):
             raise Forbidden
@@ -273,19 +248,9 @@ class Blog(Obj):
 
         # args: blog_id
         history="SELECT * FROM blogs_history($1) ORDER BY edited_at DESC",
-
-        # args: user_id, blog_id
-        check_owner="SELECT EXISTS (SELECT 1 FROM blogs "
-                    "WHERE owner=$1 AND id=$2)"
     )
 
     _type = 'blogs'
-
-    @classmethod
-    async def check_owner(cls, conn: asyncpg.connection.Connection,
-                          user_id: int, blog_id: int):
-        """Использовать только в крайних случаях"""
-        return await conn.fetchval(cls._sqls['check_owner'], user_id, blog_id)
 
     @classmethod
     async def id_u(cls, request) -> 'Blog':
@@ -342,7 +307,7 @@ class Blog(Obj):
 
         # TODO: Больше проверок
         if (
-            await FandomBanned.check_exists(conn, user_id, fandom_id)
+            await C.fandom_banned(conn, user_id, fandom_id)
         ):
             raise Forbidden
 
@@ -358,11 +323,12 @@ class Blog(Obj):
         # Проверка
         if (
             self.attrs['owner'] != self._uid and
-            not await BlogModer.check_exists(
+            not await C.blog_moder(
                 self._conn, self._uid, self.id, 'edit_b') and
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 self._conn, self._uid, self.attrs['fandom_id'], 'edit_b') and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(
+                self._conn, self._uid)
         ):
             return Forbidden
 
@@ -375,12 +341,12 @@ class Blog(Obj):
         # Проверка
         if (
             self.attrs['owner'] != self._uid and
-            not await BlogModer.check_exists(
+            not await C.blog_moder(
                 self._conn, self._uid, self.id, 'edit_b') and
-            not await FandomModer.check_exists(
-                self._conn, self._uid,
-                self.attrs['fandom_id'], 'edit_b') and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.fandom_moder(
+                self._conn, self._uid, self.attrs['fandom_id'], 'edit_b') and
+            not await C.admin(
+                self._conn, self._uid)
         ):
             raise Forbidden
 

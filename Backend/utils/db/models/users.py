@@ -5,6 +5,7 @@ from typing import Union, Tuple
 
 import asyncpg
 
+from . import checks as C
 from .base import Obj, SelectResult
 from ...web.exceptions import Forbidden, ObjectNotFound
 
@@ -21,27 +22,9 @@ class User(Obj):
 
         # args: user_id
         history="SELECT * FROM users_history ($1) ORDER BY edited_at DESC",
-
-        # args: user_id
-        check_exists="SELECT EXISTS (SELECT 1 FROM users WHERE id=$1)",
-
-        # args: user_id
-        check_admin="SELECT EXISTS (SELECT 1 FROM admins WHERE user_id=$1)"
     )
 
     _type = 'users'
-
-    @classmethod
-    async def check_exists(cls, conn: asyncpg.connection.Connection,
-                           user_id: int) -> bool:
-
-        return await conn.fetchval(cls._sqls['check_exists'], user_id)
-
-    @classmethod
-    async def check_admin(cls, conn: asyncpg.connection.Connection,
-                          user_id: int) -> bool:
-
-        return await conn.fetchval(cls._sqls['check_admin'], user_id)
 
     @classmethod
     async def id_u(cls, request) -> 'User':
@@ -94,7 +77,7 @@ class User(Obj):
         # Проверка
         if (
             self.id != self._uid and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -107,7 +90,7 @@ class User(Obj):
         # Проверка
         if (
             self.id != self._uid and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(self._conn, self._uid)
         ):
             raise Forbidden
 

@@ -5,10 +5,10 @@ from typing import Union, Tuple
 
 import asyncpg
 
+from . import checks as C
 from .base import Obj, SelectResult
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, FandomUrlAlreadyTaken)
-from .users import User
 
 __all__ = ('FandomModer', 'FandomBanned', 'Fandom')
 
@@ -39,22 +39,9 @@ class FandomModer(Obj):
 
         # args: user_id, fandom_id
         delete="DELETE FROM fandom_moders WHERE user_id=$1 AND target_id=$2",
-
-        # args: user_id, fandom_id
-        check_exists="SELECT EXISTS (SELECT 1 FROM fandom_moders "
-                     "WHERE user_id=$1 AND target_id=$2 %s)"
     )
 
     _type = 'users'
-
-    @classmethod
-    async def check_exists(cls, conn: asyncpg.connection.Connection,
-                           user_id: int, fandom_id: int,
-                           perm: str=None) -> bool:
-
-        return await conn.fetchval(
-            cls._sqls['check_exists'] % ('AND %s=TRUE' % perm) if perm else '',
-            user_id, fandom_id)
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -81,18 +68,19 @@ class FandomModer(Obj):
 
         # Проверка
         if (
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 conn, user_id, fandom_id, 'manage_f') and
-            not await User.check_admin(conn, user_id)
+            not await C.admin(
+                conn, user_id)
         ):
             raise Forbidden
 
         # Существует ли юзер
-        if not await User.check_exists(conn, fields['user_id']):
+        if not await C.user(conn, fields['user_id']):
             raise ObjectNotFound
 
         # А не забанен ли он?
-        if await FandomBanned.check_exists(conn, fields['user_id'], fandom_id):
+        if await C.fandom_banned(conn, fields['user_id'], fandom_id):
             raise UserIsBanned('moder', 'fandom')
 
         try:
@@ -111,9 +99,10 @@ class FandomModer(Obj):
 
         # Проверка
         if (
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 self._conn, self._uid, self.meta['fandom_id'], 'manage_f') and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(
+                self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -128,9 +117,10 @@ class FandomModer(Obj):
 
         # Проверка
         if (
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 self._conn, self._uid, self.meta['fandom_id'], 'manage_f') and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(
+                self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -157,20 +147,9 @@ class FandomBanned(Obj):
 
         # args: user_id, fandom_id
         delete="DELETE FROM fandom_bans WHERE user_id=$1 AND target_id=$2",
-
-        # args: user_id, fandom_id
-        check_exists="SELECT EXISTS (SELECT 1 FROM fandom_bans "
-                     "WHERE user_id=$1 AND target_id=$2)"
     )
 
     _type = 'users'
-
-    @classmethod
-    async def check_exists(cls, conn: asyncpg.connection.Connection,
-                           user_id: int, fandom_id: int):
-
-        return await conn.fetchval(
-            cls._sqls['check_exists'], user_id, fandom_id)
 
     # noinspection PyMethodOverriding
     @classmethod
@@ -197,18 +176,19 @@ class FandomBanned(Obj):
 
         # Проверка
         if (
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 conn, user_id, fandom_id, 'ban_f') and
-            not await User.check_admin(conn, user_id)
+            not await C.admin(
+                conn, user_id)
         ):
             raise Forbidden
 
         # Существует ли юзер
-        if not await User.check_exists(conn, fields['user_id']):
+        if not await C.user(conn, fields['user_id']):
             raise ObjectNotFound
 
         # А не модер ли он?
-        if await FandomModer.check_exists(conn, fields['user_id'], fandom_id):
+        if await C.fandom_moder(conn, fields['user_id'], fandom_id):
             raise UserIsModer('ban', 'fandom')
 
         try:
@@ -227,9 +207,10 @@ class FandomBanned(Obj):
 
         # Проверка
         if (
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 self._conn, self._uid, self.meta['fandom_id'], 'ban_f') and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(
+                self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -302,7 +283,7 @@ class Fandom(Obj):
                      user_id: int, fields: dict) -> int:
 
         # Проверка
-        if not await User.check_admin(conn, user_id):
+        if not await C.admin(conn, user_id):
             raise Forbidden
 
         try:
@@ -317,9 +298,10 @@ class Fandom(Obj):
 
         # Проверка
         if (
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 self._conn, self._uid, self.id, 'edit_f') and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(
+                self._conn, self._uid)
         ):
             raise Forbidden
 
@@ -331,9 +313,10 @@ class Fandom(Obj):
 
         # Проверка
         if (
-            not await FandomModer.check_exists(
+            not await C.fandom_moder(
                 self._conn, self._uid, self.id, 'edit_f') and
-            not await User.check_admin(self._conn, self._uid)
+            not await C.admin(
+                self._conn, self._uid)
         ):
             raise Forbidden
 
