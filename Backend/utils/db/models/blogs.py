@@ -301,6 +301,16 @@ class Blog(Obj):
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
+    @classmethod
+    async def select_by_owner(cls, conn: asyncpg.connection.Connection,
+                              user_id: int, target_id: int
+                              ) -> Tuple['Blog', ...]:
+
+        resp = await conn.fetch(
+            cls._sqls['select'] % "WHERE owner = $1", target_id)
+
+        return SelectResult(cls(x, conn, user_id) for x in resp)
+
     # noinspection PyMethodOverriding
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,

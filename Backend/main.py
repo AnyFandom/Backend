@@ -36,6 +36,8 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/users', views.UserList)
     url('*', '/users/{user:' + _arg + '}', views.User)
     url('*', '/users/{user:' + _arg + '}/history', views.UserHistory)
+    url('*', '/users/{user:' + _arg + '}/blogs', views.UserBlogList)
+    url('*', '/users/{user:' + _arg + '}/posts', views.UserPostList)
 
     url('*', '/fandoms', views.fandoms.FandomList)
     url('*', '/fandoms/{fandom:' + _arg + '}', views.Fandom)

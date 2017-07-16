@@ -9,6 +9,9 @@ from . import checks as C
 from .base import Obj, SelectResult
 from ...web.exceptions import Forbidden, ObjectNotFound
 
+from .blogs import Blog
+from .posts import Post
+
 __all__ = ('User',)
 
 
@@ -97,3 +100,9 @@ class User(Obj):
         resp = await self._conn.fetch(self._sqls['history'], self.id)
 
         return SelectResult(self.__class__(x) for x in resp)
+
+    async def blogs(self) -> Tuple[Blog, ...]:
+        return await Blog.select_by_owner(self._conn, self._uid, self.id)
+
+    async def posts(self) -> Tuple[Post, ...]:
+        return await Post.select_by_owner(self._conn, self._uid, self.id)
