@@ -52,8 +52,6 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{fandom:' + _arg + '}/blogs/{blog:' + _arg + '}',
         views.FandomBlog)
     url('*', '/fandoms/{fandom:' + _arg + '}/posts', views.FandomPostList)
-    url('*', '/fandoms/{fandom:' + _arg + '}/posts/{post:\w+}',
-        views.FandomPost)
 
     url('*', '/blogs', views.BlogList)
     url('*', '/blogs/{blog:\w+}', views.Blog)
@@ -63,7 +61,6 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/blogs/{blog:\w+}/bans', views.BlogBannedList)
     url('*', '/blogs/{blog:\w+}/bans/{banned:\w+}', views.BlogBanned)
     url('*', '/blogs/{blog:\w+}/posts', views.BlogPostList)
-    url('*', '/blogs/{blog:\w+}/posts/{post:\w+}', views.BlogPost)
 
     url('*', '/posts', views.PostList)
     url('*', '/posts/{post:\w+}', views.Post)

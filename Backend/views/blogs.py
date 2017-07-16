@@ -7,7 +7,7 @@ from ..utils.web import BaseView, json_response, validators as v
 __all__ = ('BlogList', 'Blog', 'BlogHistory',
            'BlogModerList', 'BlogModer',
            'BlogBannedList', 'BlogBanned',
-           'BlogPostList', 'BlogPost')
+           'BlogPostList')
 
 
 class BlogList(BaseView):
@@ -101,9 +101,3 @@ class BlogPostList(BaseView):
         loc = '/blogs/%i' % new_id
 
         return {'Location': loc}, 201, {'Location': loc}
-
-
-class BlogPost(BaseView):
-    @json_response
-    async def get(self):
-        return await (await m.Blog.id_u(self.request)).posts_id_u(self.request)

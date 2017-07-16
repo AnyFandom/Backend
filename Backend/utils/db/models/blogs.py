@@ -413,14 +413,6 @@ class Blog(Obj):
 
     # Posts
 
-    async def posts_id_u(self, request) -> Post:
-        post = request.match_info['post']
-
-        try:
-            return (await self.posts_select(post))[0]
-        except (IndexError, ValueError):
-            raise ObjectNotFound
-
     async def posts_select(self, *target_ids: Union[int, str]
                            ) -> Tuple[Post, ...]:
 

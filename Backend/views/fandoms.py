@@ -8,7 +8,7 @@ __all__ = ('FandomList', 'Fandom', 'FandomHistory',
            'FandomModerList', 'FandomModer',
            'FandomBannedList', 'FandomBanned',
            'FandomBlogList', 'FandomBlog',
-           'FandomPostList', 'FandomPost')
+           'FandomPostList')
 
 
 class FandomList(BaseView):
@@ -127,10 +127,3 @@ class FandomPostList(BaseView):
     @json_response
     async def get(self):
         return await (await m.Fandom.id_u(self.request)).posts_select()
-
-
-class FandomPost(BaseView):
-    @json_response
-    async def get(self):
-        return await (await m.Fandom.id_u(self.request)).posts_id_u(
-            self.request)
