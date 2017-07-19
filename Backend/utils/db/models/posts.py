@@ -23,7 +23,7 @@ class Post(Obj):
         update="UPDATE posts SET edited_by=$1, "
                "title=$3, content=$4 WHERE id=$2",
 
-        # args: user_id
+        # args: post_id
         history="SELECT * FROM posts_history($1) ORDER BY edited_by DESC"
     )
 

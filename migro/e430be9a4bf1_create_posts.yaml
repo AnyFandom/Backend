@@ -20,7 +20,7 @@ upgrade: |
   );
 
   CREATE TABLE posts_history (
-    PRIMARY KEY (id),
+    PRIMARY KEY (id, edited_at),
 
     id         BIGINT                    NOT NULL,
     edited_at  TIMESTAMPTZ DEFAULT now() NOT NULL,
