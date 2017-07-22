@@ -65,6 +65,7 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/posts', views.PostList)
     url('*', '/posts/{post:\w+}', views.Post)
     url('*', '/posts/{post:\w+}/history', views.PostHistory)
+    url('*', '/posts/{post:\w+}/votes', views.PostVoteList)
 
     if bool(int(config['test'])):
         print('RUNNING IN TEST MODE')

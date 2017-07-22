@@ -22,7 +22,7 @@ _sqls = dict(
                "WHERE user_id=$1 AND target_id=$2 %s)",
 
     blog_banned="SELECT EXISTS (SELECT 1 FROM blog_bans "
-                "WHERE user_id=$1 AND blog_id=$2)",
+                "WHERE user_id=$1 AND target_id=$2)",
 
     blog_owner="SELECT EXISTS (SELECT 1 FROM blogs "
                "WHERE owner=$1 AND id=$2)"

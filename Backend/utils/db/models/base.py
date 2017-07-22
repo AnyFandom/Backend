@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from collections import Mapping
-from abc import ABCMeta, abstractmethod
 
 
 # Страшный костыль
@@ -10,12 +9,11 @@ class SelectResult(tuple):
     pass
 
 
-class Obj(Mapping, metaclass=ABCMeta):
-    def __init__(self, data, conn=None, user_id=None, meta=None):
-        self._data = self._map(dict(data), meta)
+class Obj(Mapping):
+    def __init__(self, data, conn=None, user_id=None):
+        self._data = self._map(dict(data))
         self._conn = conn
         self._uid = user_id
-        self._meta = meta
 
     # Mapping
 
@@ -46,28 +44,15 @@ class Obj(Mapping, metaclass=ABCMeta):
         return '<%s id=%i>' % (type(self).__name__, self.id)
 
     _type = ''
+    _meta = None
 
     @classmethod
-    def _map(cls, data, meta) -> dict:
+    def _map(cls, data) -> dict:
         resp = dict(type=cls._type, id=data.pop('id'))
 
-        if meta is not None:
-            resp['meta'] = {x: data.pop(x) for x in meta if x in data}
+        if cls._meta is not None:
+            resp['meta'] = {x: data.pop(x) for x in cls._meta if x in data}
 
         resp['attributes'] = data
 
         return resp
-
-    @classmethod
-    @abstractmethod
-    async def select(cls, conn, user_id, *target_ids):
-        pass
-
-    @classmethod
-    @abstractmethod
-    async def insert(cls, conn, user_id, fields):
-        pass
-
-    @abstractmethod
-    async def update(self, fields):
-        pass

@@ -45,7 +45,6 @@ class FandomModer(Obj):
 
     _type = 'users'
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
                      fandom_id: int, *target_ids: Union[int, str]
@@ -61,9 +60,8 @@ class FandomModer(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
 
-        return SelectResult(cls(x, conn, user_id, cls._meta) for x in resp)
+        return SelectResult(cls(x, conn, user_id) for x in resp)
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
                      fandom_id: int, fields: dict):
@@ -153,7 +151,6 @@ class FandomBanned(Obj):
 
     _type = 'users'
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
                      fandom_id: int, *target_ids: Union[int, str]
@@ -169,7 +166,7 @@ class FandomBanned(Obj):
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
 
-        return SelectResult(cls(x, conn, user_id, cls._meta) for x in resp)
+        return SelectResult(cls(x, conn, user_id) for x in resp)
 
     # noinspection PyMethodOverriding
     @classmethod

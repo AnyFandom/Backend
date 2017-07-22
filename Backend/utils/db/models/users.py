@@ -71,10 +71,6 @@ class User(Obj):
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
-    @classmethod
-    async def insert(cls, conn, user_id, fields):
-        pass
-
     async def update(self, fields: dict):
 
         # Проверка

@@ -40,7 +40,6 @@ class Post(Obj):
         except (IndexError, ValueError):
             raise ObjectNotFound
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
                      blog_id: int, fandom_id: int,
@@ -95,12 +94,12 @@ class Post(Obj):
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
                      blog_id: int, fandom_id: int, fields: dict) -> int:
 
         if (
+            not user_id or
             await C.blog_banned(conn, user_id, blog_id) or
             await C.fandom_banned(conn, user_id, fandom_id)
         ):
@@ -149,3 +148,67 @@ class Post(Obj):
         resp = await self._conn.fetch(self._sqls['history'], self.id)
 
         return SelectResult(self.__class__(x) for x in resp)
+
+    # Votes
+
+    async def votes_select(self) -> Tuple['PostVote', ...]:
+        return await PostVote.select(self._conn, self._uid, self.id)
+
+    async def votes_insert(self, fields: dict):
+        await PostVote.insert(
+            self._conn, self._uid, self.id,
+            self.attrs['blog_id'], self.attrs['fandom_id'], fields)
+
+
+class PostVote(Obj):
+    _meta = ('post_id', 'vote')
+
+    _sqls = dict(
+        # args: post_id
+        select="SELECT u.*, pv.target_id AS post_id, pv.vote "
+               "FROM posts_votes AS pv "
+               "INNER JOIN users AS u ON pv.user_id=u.id "
+               "WHERE target_id=$1 %s ORDER BY pv.user_id ASC",
+
+        # args: post_id
+        select_short="SELECT COUNT(*) filter (WHERE vote) AS up, "
+                     "COUNT(*) filter (WHERE NOT vote) AS down "
+                     "WHERE target_id=$1",
+
+        # args: user_id, post_id, vote
+        insert="INSERT INTO posts_votes AS pv (user_id, target_id, vote)"
+               "VALUES ($1, $2, $3) "
+               "ON CONFLICT (target_id, user_id) DO "
+               "UPDATE SET vote=EXCLUDED.vote "
+               "WHERE pv.target_id=EXCLUDED.target_id "
+               "AND pv.user_id=EXCLUDED.user_id"
+    )
+
+    _type = 'users'
+
+    @classmethod
+    async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     post_id: Union[int, str]) -> Tuple['PostVote', ...]:
+
+        # Только админам можно смотреть кто голосовал
+        if await C.admin(conn, user_id):
+            resp = await conn.fetch(cls._sqls['select'] % '', int(post_id))
+        else:
+            resp = await conn.fetch(cls._sqls['select'] % 'AND user_id=$2',
+                                    int(post_id), user_id)
+
+        return SelectResult(cls(x, conn, user_id) for x in resp)
+
+    @classmethod
+    async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
+                     post_id: int, blog_id: int, fandom_id: int, fields: dict):
+
+        if (
+            not user_id or
+            await C.blog_banned(conn, user_id, blog_id) or
+            await C.fandom_banned(conn, user_id, fandom_id)
+        ):
+            raise Forbidden
+
+        await conn.execute(
+            cls._sqls['insert'], user_id, post_id, fields['vote'])

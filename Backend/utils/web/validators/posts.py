@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .validators import JsonValidator, Field, string
+from .validators import JsonValidator, Field, string, boolean
 
 
 insert = JsonValidator(
@@ -12,4 +12,8 @@ insert = JsonValidator(
 update = JsonValidator(
     Field(False, 'title', string, mn=8, mx=128),
     Field(False, 'content', string, mn=8, mx=65535)
+)
+
+votes_insert = JsonValidator(
+    Field(True, 'vote', boolean)
 )
