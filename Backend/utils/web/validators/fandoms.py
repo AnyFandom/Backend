@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .validators import JsonValidator, Field, string, integer, boolean
+from .validators import Validator, Field, string, integer, boolean
 
 
-insert = JsonValidator(
+insert = Validator(
     Field(True, 'title', string, mn=3, mx=64),
     Field(True, 'url', string, mn=6, mx=32),
     Field(False, 'description', string, mn=0, mx=65535, default=''),
     Field(False, 'avatar', string, mn=0, mx=64, default='')
 )
 
-update = JsonValidator(
+update = Validator(
     Field(False, 'title', string, mn=3, mx=64),
     Field(False, 'description', string, mn=0, mx=65535),
     Field(False, 'avatar', string, mn=0, mx=64)
 )
 
-moders_insert = JsonValidator(
+moders_insert = Validator(
     Field(True, 'user_id', integer),
     Field(True, 'edit_f', boolean),
     Field(True, 'manage_f', boolean),
@@ -28,7 +28,7 @@ moders_insert = JsonValidator(
     Field(True, 'edit_c', boolean),
 )
 
-moders_update = JsonValidator(
+moders_update = Validator(
     Field(False, 'edit_f', boolean),
     Field(False, 'manage_f', boolean),
     Field(False, 'ban_f', boolean),
@@ -38,7 +38,7 @@ moders_update = JsonValidator(
     Field(False, 'edit_c', boolean),
 )
 
-bans_insert = JsonValidator(
+bans_insert = Validator(
     Field(True, 'user_id', integer),
     Field(True, 'reason', string, mn=0, mx=128),
 )

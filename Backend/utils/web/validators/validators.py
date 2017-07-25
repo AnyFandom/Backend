@@ -35,6 +35,13 @@ def integer(val: Any) -> int:
     return val
 
 
+def qinteger(val: Any) -> int:
+    try:
+        return int(val)
+    except ValueError:
+        raise _ValErr('Expected int, got str')
+
+
 def boolean(val: Any) -> bool:
     _check(isinstance(val, bool), 'Expected bool, got %s' % type(val).__name__)
     return val
@@ -60,8 +67,8 @@ class Field:
         return self._func(val, **self._args)
 
 
-class JsonValidator:
-    def __init__(self, *fields: Field) -> None:
+class Validator:
+    def __init__(self, *fields: Field):
         self._f = fields
 
     def __call__(self, obj: dict) -> dict:
@@ -83,14 +90,7 @@ class JsonValidator:
         return resp
 
 
-async def _get_body(request: Request, validator: JsonValidator):
-    try:
-        return validator(await request.json())
-    except json.decoder.JSONDecodeError as exc:
-        raise InvalidJson(details=str(exc))
-
-
-def get_body(validator: JsonValidator):
+def get_body(validator: Validator):
     def wrap(func):
         async def wrap2(*args):
             if isinstance(args[0], Request):
@@ -98,6 +98,26 @@ def get_body(validator: JsonValidator):
             else:
                 request = args[0].request
 
-            return await func(args[0], await _get_body(request, validator))
+            try:
+                body = validator(await request.json())
+            except json.decoder.JSONDecodeError as exc:
+                raise InvalidJson(details=str(exc))
+
+            return await func(*args, body)
+        return wrap2
+    return wrap
+
+
+def get_query(validator: Validator):
+    def wrap(func):
+        async def wrap2(*args):
+            if isinstance(args[0], Request):
+                request = args[0]
+            else:
+                request = args[0].request
+
+            query = validator(request.query)
+
+            return await func(*args, query)
         return wrap2
     return wrap
