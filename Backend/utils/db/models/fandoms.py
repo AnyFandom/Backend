@@ -168,7 +168,6 @@ class FandomBanned(Obj):
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
-    # noinspection PyMethodOverriding
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
                      fandom_id: int, fields: dict):

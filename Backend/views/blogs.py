@@ -98,6 +98,6 @@ class BlogPostList(BaseView):
     @v.get_body(v.posts.insert)
     async def post(self, body):
         new_id = await (await m.Blog.id_u(self.request)).posts_insert(body)
-        loc = '/blogs/%i' % new_id
+        loc = '/posts/%i' % new_id
 
         return {'Location': loc}, 201, {'Location': loc}
