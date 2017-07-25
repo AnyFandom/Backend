@@ -17,7 +17,7 @@ __all__ = ('User',)
 
 class User(Obj):
     _sqls = dict(
-        select="SELECT * FROM users %s ORDER BY id ASC",
+        select="SELECT * FROM users %s ORDER BY id ASC %s",
 
         # args: edited_by, user_id, description, avatar,
         update="UPDATE users SET edited_by=$1, "
@@ -51,23 +51,25 @@ class User(Obj):
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection,
                      user_id: int, *target_ids: Union[int, str],
-                     u: bool=False) -> Tuple['User', ...]:
+                     u: bool=False, page: int=0) -> Tuple['User', ...]:
 
         # На вход поданы имена
         if u and target_ids:
             resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE username = ANY($1::CITEXT[])",
-                target_ids)
+                cls._sqls['select'] % (
+                    "WHERE username = ANY($1::CITEXT[])", ""
+                ), target_ids)
 
         # На вход поданы ID
         elif target_ids:
             resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
+                cls._sqls['select'] % ("WHERE id = ANY($1::BIGINT[])", ""),
                 tuple(map(int, target_ids)))
 
         # На вход не подано ничего
         else:
-            resp = await conn.fetch(cls._sqls['select'] % '')
+            resp = await conn.fetch(
+                cls._sqls['select'] % ("", "LIMIT 20 OFFSET $1"), page * 20)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
