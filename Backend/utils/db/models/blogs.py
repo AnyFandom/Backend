@@ -49,13 +49,13 @@ class BlogModer(Obj):
                      blog_id: int, *target_ids: Union[int, str]
                      ) -> Tuple['BlogModer', ...]:
 
-        # На вход поданы ID
+        # Ищем по ID
         if target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % 'AND bm.user_id = ANY($2::BIGINT[])',
                 blog_id, tuple(map(int, target_ids)))
 
-        # На вход не подано ничего
+        # Возвращаем все
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', blog_id)
 
@@ -163,13 +163,13 @@ class BlogBanned(Obj):
     async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
                      blog_id: int, *target_ids: Union[int, str]):
 
-        # На вход поданы ID
+        # Ищем по ID
         if target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % 'AND bb.user_id = ANY($2::BIGINT[])',
                 blog_id, tuple(map(int, target_ids)))
 
-        # На вход не подано ничего
+        # Возвращаем все
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', blog_id)
 
@@ -265,32 +265,32 @@ class Blog(Obj):
                      fandom_id: int, *target_ids: Union[int, str],
                      u: bool=False) -> Tuple['Blog', ...]:
 
-        # На вход поданы url И fandom_id
+        # Ищем по url в фандоме
         if u and target_ids and fandom_id:
             resp = await conn.fetch(
                 cls._sqls['select'] % "WHERE url = ANY($1::CITEXT[]) "
                                       "AND fandom_id = $2",
                 target_ids, fandom_id)
 
-        # На вход поданы ID И fandom_id
+        # Ищем по ID в фандоме
         elif target_ids and fandom_id:
             resp = await conn.fetch(
                 cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[]) "
                                       "AND fandom_id = $2",
                 tuple(map(int, target_ids)), fandom_id)
 
-        # На вход поданы ID
+        # Ищем по ID
         elif target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
                 tuple(map(int, target_ids)))
 
-        # На вход подан fandom_id
+        # Ищем по фандому
         elif fandom_id:
             resp = await conn.fetch(
                 cls._sqls['select'] % 'WHERE fandom_id = $1', fandom_id)
 
-        # На вход не подано ничего
+        # Возвращаем все
         else:
             resp = await conn.fetch(cls._sqls['select'] % '')
 

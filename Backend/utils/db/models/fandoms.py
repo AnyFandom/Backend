@@ -50,13 +50,13 @@ class FandomModer(Obj):
                      fandom_id: int, *target_ids: Union[int, str]
                      ) -> Tuple['FandomModer', ...]:
 
-        # На вход поданы ID
+        # Ищем по ID
         if target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % 'AND fm.user_id = ANY($2::BIGINT[])',
                 fandom_id, tuple(map(int, target_ids)))
 
-        # На вход не подано ничего
+        # Возвращаем все
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
 
@@ -156,13 +156,13 @@ class FandomBanned(Obj):
                      fandom_id: int, *target_ids: Union[int, str]
                      ) -> Tuple['FandomBanned', ...]:
 
-        # На вход поданы ID
+        # Ищем по ID
         if target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % 'AND fb.user_id = ANY($2::BIGINT[])',
                 fandom_id, tuple(map(int, target_ids)))
 
-        # На вход не подано ничего
+        # Возвращаем все
         else:
             resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
 
@@ -255,19 +255,19 @@ class Fandom(Obj):
                      user_id: int, *target_ids: Union[int, str],
                      u: bool=False) -> Tuple['Fandom', ...]:
 
-        # На вход поданы url
+        # Ищем по url
         if u and target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % "WHERE url = ANY($1::CITEXT[])",
                 target_ids)
 
-        # На вход поданы ID
+        # Ищем по ID
         elif target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
                 tuple(map(int, target_ids)))
 
-        # На вход не подано ничего
+        # Возвращаем все
         else:
             resp = await conn.fetch(cls._sqls['select'] % '')
 

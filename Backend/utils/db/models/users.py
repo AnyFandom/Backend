@@ -53,20 +53,20 @@ class User(Obj):
                      user_id: int, *target_ids: Union[int, str],
                      u: bool=False, page: int=0) -> Tuple['User', ...]:
 
-        # На вход поданы имена
+        # Ищем по имени
         if u and target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % (
                     "WHERE username = ANY($1::CITEXT[])", ""
                 ), target_ids)
 
-        # На вход поданы ID
+        # Ищем по ID
         elif target_ids:
             resp = await conn.fetch(
                 cls._sqls['select'] % ("WHERE id = ANY($1::BIGINT[])", ""),
                 tuple(map(int, target_ids)))
 
-        # На вход не подано ничего
+        # Возвращаем все
         else:
             resp = await conn.fetch(
                 cls._sqls['select'] % ("", "LIMIT 20 OFFSET $1"), page * 20)
