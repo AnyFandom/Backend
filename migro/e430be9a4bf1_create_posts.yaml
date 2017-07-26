@@ -98,7 +98,17 @@ upgrade: |
 
   $$ LANGUAGE sql;
 
+  CREATE TABLE posts_votes (
+    PRIMARY KEY (target_id, user_id),
+
+    target_id BIGINT NOT NULL,
+    user_id   BIGINT NOT NULL,
+    vote      BOOLEAN
+  );
+  CREATE INDEX ON posts_votes (vote);
+
 downgrade: |
+  DROP TABLE posts_votes;
   DROP FUNCTION posts_history (BIGINT);
   DROP FUNCTION posts_create (BIGINT, BIGINT, BIGINT, TEXT, TEXT);
   DROP TRIGGER update ON posts;

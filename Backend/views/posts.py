@@ -4,7 +4,7 @@
 from ..utils.db import models as m
 from ..utils.web import BaseView, json_response, validators as v
 
-__all__ = ('PostList', 'Post', 'PostHistory')
+__all__ = ('PostList', 'Post', 'PostHistory', 'PostVoteList')
 
 
 class PostList(BaseView):
@@ -28,3 +28,16 @@ class PostHistory(BaseView):
     @json_response
     async def get(self):
         return await (await m.Post.id_u(self.request)).history()
+
+
+class PostVoteList(BaseView):
+    @json_response
+    async def get(self):
+        return await (await m.Post.id_u(self.request)).votes_select()
+
+    @json_response
+    @v.get_body(v.posts.votes_insert)
+    async def post(self, body):
+        await (await m.Post.id_u(self.request)).votes_insert(body)
+
+        return None, 201
