@@ -1,32 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from collections import Mapping
-
 
 # Страшный костыль
 class SelectResult(tuple):
     pass
 
 
-class Obj(Mapping):
+class Obj:
     def __init__(self, data, conn=None, user_id=None):
         self._data = self._map(dict(data))
         self._conn = conn
         self._uid = user_id
-
-    # Mapping
-
-    def __getitem__(self, item):
-        return self._data[item]
-
-    def __len__(self):
-        return len(self._data)
-
-    def __iter__(self):
-        return iter(self._data)
-
-    #########
 
     @property
     def id(self):
@@ -44,7 +29,7 @@ class Obj(Mapping):
         return '<%s id=%i>' % (type(self).__name__, self.id)
 
     _type = ''
-    _meta = None
+    _meta: tuple = None
 
     @classmethod
     def _map(cls, data) -> dict:

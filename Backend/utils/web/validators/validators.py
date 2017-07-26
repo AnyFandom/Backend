@@ -68,7 +68,7 @@ class Field:
 
 
 class Validator:
-    def __init__(self, *fields: Field):
+    def __init__(self, *fields: Field) -> None:
         self._f = fields
 
     def __call__(self, obj: dict) -> dict:

@@ -98,7 +98,7 @@ class UserIsModer(FailException):
     status_code = 409
     description = 'User that you are trying to %s is %smoderator of this %s'
 
-    def __init__(self, action: str, place: str, **kwargs):
+    def __init__(self, action: str, place: str, **kwargs) -> None:
         assert action in ('moder', 'ban'), 'Invalid action'
 
         self.description %= (
@@ -112,7 +112,7 @@ class UserIsBanned(FailException):
     status_code = 409
     description = 'User that you are trying to %s is %sbanned from this %s'
 
-    def __init__(self, action: str, place: str, **kwargs):
+    def __init__(self, action: str, place: str, **kwargs) -> None:
         assert action in ('moder', 'ban'), 'Invalid action'
 
         self.description %= (
@@ -126,7 +126,7 @@ class UserIsOwner(FailException):
     status_code = 409
     description = 'User that you are trying to %s is owner of this %s'
 
-    def __init__(self, action: str, place: str, **kwargs):
+    def __init__(self, action: str, place: str, **kwargs) -> None:
         assert action in ('moder', 'ban'), 'Invalid action'
 
         self.description %= (

@@ -50,7 +50,7 @@ class Encoder(json.JSONEncoder):
         if isinstance(o, datetime):
             return o.isoformat()
         elif isinstance(o, Obj):
-            return dict(o)
+            return o._data
         super().default(o)
 
     def __call__(self, *args, **kwargs):
