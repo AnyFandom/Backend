@@ -18,6 +18,9 @@ upgrade: |
     title      TEXT                      NOT NULL,
     content    TEXT                      NOT NULL
   );
+  CREATE INDEX ON posts (blog_id);
+  CREATE INDEX ON posts (fandom_id);
+  CREATE INDEX ON posts (owner);
 
   CREATE TABLE posts_history (
     PRIMARY KEY (id, edited_at),

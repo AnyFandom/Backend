@@ -42,6 +42,8 @@ upgrade: |
     description TEXT DEFAULT ''           NOT NULL,
     avatar      TEXT DEFAULT ''           NOT NULL
   );
+  CREATE INDEX ON blogs (fandom_id);
+  CREATE INDEX ON blogs (owner);
 
   CREATE TABLE blogs_history (
     PRIMARY KEY (id, edited_at),
