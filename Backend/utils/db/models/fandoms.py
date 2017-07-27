@@ -35,9 +35,9 @@ class FandomModer(Obj):
 
         # args: user_id, fandom_id, edit_f, manage_F, ban_f, create_b, edit_b,
         #       edit_p, edit_c
-        update="UPDATE fandom_moders SET target_id=$2, edit_f=$3, "
+        update="UPDATE fandom_moders SET edit_f=$3, "
                "manage_f=$4, ban_f=$5, create_b=$6, edit_b=$7, edit_p=$8, "
-               "edit_c=$9 WHERE user_id=$1",
+               "edit_c=$9 WHERE user_id=$1 AND target_id=$2",
 
         # args: user_id, fandom_id
         delete="DELETE FROM fandom_moders WHERE user_id=$1 AND target_id=$2",
@@ -107,8 +107,7 @@ class FandomModer(Obj):
             raise Forbidden
 
         await self._conn.execute(
-            self._sqls['update'], self.id,
-            self.meta['fandom_id'],
+            self._sqls['update'], self.id, self.meta['fandom_id'],
             fields['edit_f'], fields['manage_f'], fields['ban_f'],
             fields['create_b'], fields['edit_b'],
             fields['edit_p'], fields['edit_c'])

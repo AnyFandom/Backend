@@ -21,7 +21,7 @@ class BlogModer(Obj):
     _sqls = dict(
         # args: blog_id
         select="SELECT u.*, bm.target_id AS blog_id, bm.edit_b, bm.manage_b,"
-               "bm.ban_b, bm.create_p, fm.edit_p, fm.edit_c "
+               "bm.ban_b, bm.create_p, bm.edit_p, bm.edit_c "
                "FROM blog_moders AS bm "
                "INNER JOIN users AS u ON bm.user_id=u.id "
                "WHERE bm.target_id=$1 %s ORDER BY u.id ASC",
@@ -34,9 +34,9 @@ class BlogModer(Obj):
 
         # args: user_id, blog_id, edit_b, manage_b, ban_b, create_p, edit_p,
         #       edit_c
-        update="UPDATE blog_moders SET target_id=$2, edit_b=$3, "
+        update="UPDATE blog_moders SET edit_b=$3, "
                "manage_b=$4, ban_b=$5, create_p=$6, edit_p=$7, edit_c=$8 "
-               "WHERE user_id=$1",
+               "WHERE user_id=$1 AND target_id=$2",
 
         # args: user_id, blog_id
         delete="DELETE FROM blog_moders WHERE user_id=$1 AND target_id=$2",
@@ -113,8 +113,7 @@ class BlogModer(Obj):
             raise Forbidden
 
         await self._conn.execute(
-            self._sqls['update'], self.id,
-            self.meta['fandom_id'],
+            self._sqls['update'], self.id, self.meta['fandom_id'],
             fields['edit_f'], fields['manage_f'], fields['ban_f'],
             fields['create_b'], fields['edit_b'],
             fields['edit_p'], fields['edit_c'])
