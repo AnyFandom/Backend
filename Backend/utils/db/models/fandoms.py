@@ -6,7 +6,7 @@ from typing import Union, Tuple
 import asyncpg
 
 from . import checks as C
-from .base import Obj, SelectResult
+from .base import Obj, SelectResult, Commands
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, FandomUrlAlreadyTaken)
 from .blogs import Blog
@@ -19,13 +19,22 @@ class FandomModer(Obj):
     _meta = ('fandom_id', 'edit_f', 'manage_f', 'ban_f',
              'create_b', 'edit_b', 'edit_p', 'edit_c')
 
-    _sqls = dict(
+    _c = Commands(
         # args: fandom_id
         select="SELECT u.*, fm.target_id AS fandom_id, fm.edit_f, fm.manage_f,"
                "fm.ban_f, fm.create_b, fm.edit_b, fm.edit_p, fm.edit_c "
                "FROM fandom_moders AS fm "
                "INNER JOIN users AS u ON fm.user_id=u.id "
-               "WHERE fm.target_id=$1 %s ORDER BY u.id ASC",
+               "WHERE fm.target_id=$1 ORDER BY u.id ASC",
+
+        # args: fandom_id, user_ids
+        select_by_id="SELECT u.*, fm.target_id AS fandom_id, fm.edit_f, "
+                     "fm.manage_f, fm.ban_f, fm.create_b, fm.edit_b, "
+                     "fm.edit_p, fm.edit_c "
+                     "FROM fandom_moders AS fm "
+                     "INNER JOIN users AS u ON fm.user_id=u.id "
+                     "WHERE fm.target_id=$1 "
+                     "AND fm.user_id = ANY($2::BIGINT[]) ORDER BY u.id ASC",
 
         # args: user_id, fandom_id, edit_f, manage_f, ban_f, create_b, edit_b,
         #       edit_p, edit_c
@@ -52,13 +61,12 @@ class FandomModer(Obj):
 
         # Ищем по ID
         if target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % 'AND fm.user_id = ANY($2::BIGINT[])',
-                fandom_id, tuple(map(int, target_ids)))
+            resp = await cls._c.select_by_id(
+                conn, fandom_id, tuple(map(int, target_ids)))
 
         # Возвращаем все
         else:
-            resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
+            resp = await cls._c.select(conn, fandom_id)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -84,14 +92,11 @@ class FandomModer(Obj):
             raise UserIsBanned('moder', 'fandom')
 
         try:
-            await conn.execute(
-                cls._sqls['insert'],
-
-                fields['user_id'], user_id,
+            await cls._c.e.insert(
+                conn, fields['user_id'], user_id,
                 fields['edit_f'], fields['manage_f'], fields['ban_f'],
                 fields['create_b'], fields['edit_b'],
-                fields['edit_p'], fields['edit_c']
-            )
+                fields['edit_p'], fields['edit_c'])
         except asyncpg.exceptions.UniqueViolationError:
             raise UserIsModer('moder', 'fandom')
 
@@ -106,8 +111,8 @@ class FandomModer(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['update'], self.id, self.meta['fandom_id'],
+        await self._c.e.update(
+            self._conn, self.id, self.meta['fandom_id'],
             fields['edit_f'], fields['manage_f'], fields['ban_f'],
             fields['create_b'], fields['edit_b'],
             fields['edit_p'], fields['edit_c'])
@@ -123,22 +128,26 @@ class FandomModer(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['delete'],
-
-            self.id, self.meta['fandom_id']
-        )
+        await self._c.e.delete(self._conn, self.id, self.meta['fandom_id'])
 
 
 class FandomBanned(Obj):
     _meta = ('fandom_id', 'set_by', 'reason')
 
-    _sqls = dict(
+    _c = Commands(
         # args: fandom_id
         select="SELECT u.*, fb.target_id as fandom_id, fb.set_by, fb.reason "
                "FROM fandom_bans AS fb "
                "INNER JOIN users AS u ON fb.user_id=u.id "
-               "WHERE fb.target_id=$1 %s ORDER BY u.id ASC",
+               "WHERE fb.target_id=$1 ORDER BY u.id ASC",
+
+        # args: fandom_id, user_ids
+        select_by_id="SELECT u.*, fb.target_id as fandom_id, fb.set_by,"
+                     "fb.reason "
+                     "FROM fandom_bans AS fb "
+                     "INNER JOIN users AS u ON fb.user_id=u.id "
+                     "WHERE fb.target_id=$1 "
+                     "AND fb.user_id = ANY($2::BIGINT[]) ORDER BY u.id ASC",
 
         # args: user_id, fandom_id, set_by, reason
         insert="INSERT INTO fandom_bans (user_id, target_id, set_by, reason) "
@@ -157,13 +166,12 @@ class FandomBanned(Obj):
 
         # Ищем по ID
         if target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % 'AND fb.user_id = ANY($2::BIGINT[])',
-                fandom_id, tuple(map(int, target_ids)))
+            resp = await cls._c.select_by_id(
+                conn, fandom_id, tuple(map(int, target_ids)))
 
         # Возвращаем все
         else:
-            resp = await conn.fetch(cls._sqls['select'] % '', fandom_id)
+            resp = await cls._c.select(conn, fandom_id)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -189,16 +197,10 @@ class FandomBanned(Obj):
             raise UserIsModer('ban', 'fandom')
 
         try:
-            await conn.execute(
-                cls._sqls['insert'],
-
-                fields['user_id'], fandom_id,
-                user_id, fields['reason'])
+            await cls._c.e.insert(
+                conn, fields['user_id'], fandom_id, user_id, fields['reason'])
         except asyncpg.exceptions.UniqueViolationError:
             raise UserIsBanned('ban', 'fandom')
-
-    async def update(self, fields):
-        pass
 
     async def delete(self):
 
@@ -211,16 +213,20 @@ class FandomBanned(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['delete'],
-
-            self.id, self.meta['fandom_id']
-        )
+        await self._c.e.delete(self._conn, self.id, self.meta['fandom_id'])
 
 
 class Fandom(Obj):
-    _sqls = dict(
-        select="SELECT * FROM fandoms %s ORDER BY id ASC",
+    _c = Commands(
+        select="SELECT * FROM fandoms ORDER BY id ASC",
+
+        # args: fandom_urls
+        select_by_u="SELECT * FROM fandoms WHERE url = ANY($1::CITEXT[]) "
+                    "ORDER BY id",
+
+        # args: fandom_ids
+        select_by_id="SELECT * FROM fandoms WHERE id = ANY($1::BIGINT[]) "
+                     "ORDER BY id",
 
         # args: user_id, url, title, description, avatar
         insert="SELECT fandoms_create($1, $2, $3, $4, $5)",
@@ -256,19 +262,15 @@ class Fandom(Obj):
 
         # Ищем по url
         if u and target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE url = ANY($1::CITEXT[])",
-                target_ids)
+            resp = await cls._c.select_by_url(conn, target_ids)
 
         # Ищем по ID
         elif target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
-                tuple(map(int, target_ids)))
+            resp = await cls._c.select_by_id(conn, tuple(map(int, target_ids)))
 
         # Возвращаем все
         else:
-            resp = await conn.fetch(cls._sqls['select'] % '')
+            resp = await cls._c.select(conn)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -281,8 +283,8 @@ class Fandom(Obj):
             raise Forbidden
 
         try:
-            return await conn.fetchval(
-                cls._sqls['insert'], user_id, fields['url'],
+            return await cls._c.insert(
+                conn, user_id, fields['url'],
                 fields['title'], fields['description'],
                 fields['avatar'])
         except asyncpg.exceptions.UniqueViolationError:
@@ -299,8 +301,8 @@ class Fandom(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['update'], self._uid, self.id,
+        await self._c.e.update(
+            self._conn, self._uid, self.id,
             fields['title'], fields['description'], fields['avatar'])
 
     async def history(self) -> Tuple['Fandom', ...]:
@@ -314,7 +316,7 @@ class Fandom(Obj):
         ):
             raise Forbidden
 
-        resp = await self._conn.fetch(self._sqls['history'], self.id)
+        resp = await self._c.history(self._conn, self.id)
 
         return SelectResult(self.__class__(x) for x in resp)
 

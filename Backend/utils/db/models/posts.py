@@ -6,15 +6,41 @@ from typing import Union, Tuple
 import asyncpg
 
 from . import checks as C
-from .base import Obj, SelectResult
+from .base import Obj, SelectResult, Commands
 from ...web.exceptions import Forbidden, ObjectNotFound
 
 __all__ = ('Post',)
 
 
 class Post(Obj):
-    _sqls = dict(
-        select="SELECT * FROM blogs %s ORDER BY id ASC",
+    _c = Commands(
+        # TODO: Добавить голоса за/против
+        select="SELECT * FROM posts ORDER BY id ASC",
+
+        # args: blog_id, post_ids
+        select_by_id_in_blog="SELECT * FROM posts "
+                             "WHERE blog_id=$1 "
+                             "AND id = ANY($2::BIGINT[]) ORDER BY id ASC",
+
+        # args: fandom_id, post_ids
+        select_by_id_in_fandom="SELECT * FROM posts "
+                               "WHERE fandom_id=$1 "
+                               "AND id = ANY($2::BIGINT[]) ORDER BY id ASC",
+
+        # args: post_ids
+        select_by_id="SELECT * FROM posts "
+                     "WHERE id = ANY($1::BIGINT[]) ORDER BY id ASC",
+
+        # args: blog_id
+        select_by_blog="SELECT * FROM posts "
+                       "WHERE blog_id=$1 ORDER BY id ASC",
+
+        # args: fandom_id
+        select_by_fandom="SELECT * FROM posts "
+                         "WHERE fandom_id=$1 ORDER BY id ASC",
+
+        # args: user_id
+        select_by_owner="SELECT * FROM posts WHERE owner=$1 ORDER BY id ASC",
 
         # args: user_id, blog_id, fandom_id, title, content
         insert="SELECT posts_create($1, $2, $3, $4, $5)",
@@ -50,37 +76,29 @@ class Post(Obj):
 
         # Ищем по ID в блоге
         if target_ids and blog_id:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[]) "
-                                      "AND blog_id = $2",
-                tuple(map(int, target_ids)), blog_id)
+            resp = await cls._c.select_by_id_in_blog(
+                conn, blog_id, tuple(map(int, target_ids)))
 
         # Ищем по ID в фандоме
         elif target_ids and fandom_id:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[]) "
-                                      "AND fandom_id = $2",
-                tuple(map(int, target_ids)), fandom_id)
+            resp = await cls._c.select_by_id_in_fandom(
+                conn, fandom_id, tuple(map(int, target_ids)))
 
         # Ищем по ID
         elif target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
-                tuple(map(int, target_ids)))
+            resp = await cls._c.select_by_id(conn, tuple(map(int, target_ids)))
 
         # Ищем по блогу
         elif blog_id:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE blog_id = $1", blog_id)
+            resp = await cls._c.select_by_blog(conn, blog_id)
 
         # Ищем по фандому
         elif fandom_id:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE fandom_id = $1", fandom_id)
+            resp = await cls._c.select_by_fandom(conn, fandom_id)
 
         # Возвращаем все
         else:
-            resp = await conn.fetch(cls._sqls['select'] % "")
+            resp = await cls._c.select(conn)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -89,8 +107,7 @@ class Post(Obj):
                               user_id: int, target_id: int
                               ) -> Tuple['Post', ...]:
 
-        resp = await conn.fetch(
-            cls._sqls['select'] % "WHERE owner = $1", target_id)
+        resp = await cls._c.select_by_owner(conn, target_id)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -105,8 +122,8 @@ class Post(Obj):
         ):
             raise Forbidden
 
-        return await conn.fetchval(
-            cls._sqls['insert'], user_id, blog_id, fandom_id,
+        return await cls._c.insert(
+            conn, user_id, blog_id, fandom_id,
             fields['title'], fields['content'])
 
     async def update(self, fields: dict):
@@ -125,8 +142,8 @@ class Post(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['update'], self._uid, self.id,
+        await self._c.e.update(
+            self._conn, self._uid, self.id,
             fields['title'], fields['content'])
 
     async def history(self) -> Tuple['Post', ...]:
@@ -145,7 +162,7 @@ class Post(Obj):
         ):
             raise Forbidden
 
-        resp = await self._conn.fetch(self._sqls['history'], self.id)
+        resp = await self._c.history(self._conn, self.id)
 
         return SelectResult(self.__class__(x) for x in resp)
 
@@ -163,12 +180,19 @@ class Post(Obj):
 class PostVote(Obj):
     _meta = ('post_id', 'vote')
 
-    _sqls = dict(
+    _c = Commands(
         # args: post_id
         select="SELECT u.*, pv.target_id AS post_id, pv.vote "
                "FROM posts_votes AS pv "
                "INNER JOIN users AS u ON pv.user_id=u.id "
-               "WHERE target_id=$1 %s ORDER BY pv.user_id ASC",
+               "WHERE target_id=$1 ORDER BY pv.user_id ASC",
+
+        # args: user_id, post_id
+        select_by_id="SELECT u.*, pv.target_id AS post_id, pv.vote "
+                     "FROM posts_votes AS pv "
+                     "INNER JOIN users AS u ON pv.user_id=u.id "
+                     "WHERE user_id=$1 "
+                     "AND target_id=$2 ORDER BY pv.user_id ASC",
 
         # args: post_id
         select_short="SELECT COUNT(*) filter (WHERE vote) AS up, "
@@ -192,10 +216,9 @@ class PostVote(Obj):
 
         # Только админам можно смотреть кто голосовал
         if await C.admin(conn, user_id):
-            resp = await conn.fetch(cls._sqls['select'] % '', int(post_id))
+            resp = await cls._c.select(conn, int(post_id))
         else:
-            resp = await conn.fetch(cls._sqls['select'] % 'AND user_id=$2',
-                                    int(post_id), user_id)
+            resp = await cls._c.select_by_id(conn, user_id, int(user_id))
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -210,5 +233,4 @@ class PostVote(Obj):
         ):
             raise Forbidden
 
-        await conn.execute(
-            cls._sqls['insert'], user_id, post_id, fields['vote'])
+        await cls._c.e.insert(conn, user_id, post_id, fields['vote'])

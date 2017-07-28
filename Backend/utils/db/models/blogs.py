@@ -6,7 +6,7 @@ from typing import Union, Tuple
 import asyncpg
 
 from . import checks as C
-from .base import Obj, SelectResult
+from .base import Obj, SelectResult, Commands
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, UserIsOwner, BlogUrlAlreadyTaken)
 from .posts import Post
@@ -18,13 +18,22 @@ class BlogModer(Obj):
     _meta = ('blog_id', 'edit_b', 'manage_b', 'ban_b',
              'create_p', 'edit_p', 'edit_c')
 
-    _sqls = dict(
+    _c = Commands(
         # args: blog_id
         select="SELECT u.*, bm.target_id AS blog_id, bm.edit_b, bm.manage_b,"
                "bm.ban_b, bm.create_p, bm.edit_p, bm.edit_c "
                "FROM blog_moders AS bm "
                "INNER JOIN users AS u ON bm.user_id=u.id "
-               "WHERE bm.target_id=$1 %s ORDER BY u.id ASC",
+               "WHERE bm.target_id=$1 ORDER BY u.id ASC",
+
+        # args: blog_id, user_ids
+        select_by_id="SELECT u.*, bm.target_id AS blog_id, bm.edit_b, "
+                     "bm.manage_b, bm.ban_b, bm.create_p, bm.edit_p, "
+                     "bm.edit_c "
+                     "FROM blog_moders AS bm "
+                     "INNER JOIN users AS u ON bm.user_id=u.id "
+                     "WHERE bm.target_id=$1 "
+                     "AND bm.user_id = ANY($2::BIGINT[]) ORDER BY u.id ASC",
 
         # args: user_id, blog_id, edit_b, manage_b, ban_b, create_p, edit_p,
         #       edit_c
@@ -51,13 +60,12 @@ class BlogModer(Obj):
 
         # Ищем по ID
         if target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % 'AND bm.user_id = ANY($2::BIGINT[])',
-                blog_id, tuple(map(int, target_ids)))
+            resp = await cls._c.select_by_id(
+                conn, blog_id, tuple(map(int, target_ids)))
 
         # Возвращаем все
         else:
-            resp = await conn.fetch(cls._sqls['select'] % '', blog_id)
+            resp = await cls._c.select(conn, blog_id)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -91,11 +99,10 @@ class BlogModer(Obj):
             raise UserIsBanned('moder', 'fandom')
 
         try:
-            await conn.execute(
-                cls._sqls['insert'], fields['user_id'], user_id,
+            await cls._c.e.insert(
+                conn, fields['user_id'], user_id,
                 fields['edit_b'], fields['manage_b'], fields['ban_b'],
-                fields['create_p'], fields['edit_p'], fields['edit_c']
-            )
+                fields['create_p'], fields['edit_p'], fields['edit_c'])
         except asyncpg.exceptions.UniqueViolationError:
             raise UserIsModer('moder', 'blog')
 
@@ -112,8 +119,8 @@ class BlogModer(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['update'], self.id, self.meta['fandom_id'],
+        await self._c.e.update(
+            self._conn, self.id, self.meta['fandom_id'],
             fields['edit_f'], fields['manage_f'], fields['ban_f'],
             fields['create_b'], fields['edit_b'],
             fields['edit_p'], fields['edit_c'])
@@ -131,22 +138,26 @@ class BlogModer(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['delete'],
-
-            self.id, self.meta['fandom_id']
-        )
+        await self._c.e.delete(self._conn, self.id, self.meta['fandom_id'])
 
 
 class BlogBanned(Obj):
     _meta = ('blog_id', 'set_by', 'reason')
 
-    _sqls = dict(
+    _c = Commands(
         # args: blog_id
         select="SELECT u.*, bb.target_id as blog_id, bb.set_by, bb.reason "
                "FROM blog_bans as bb "
                "INNER JOIN users AS u ON bb.user_id=u.id "
-               "WHERE bb.target_id=$1 %s ORDER BY u.id ASC",
+               "WHERE bb.target_id=$1 ORDER BY u.id ASC",
+
+        # args: blog_id, user_ids
+        select_by_id="SELECT u.*, bb.target_id as blog_id, bb.set_by, "
+                     "bb.reason "
+                     "FROM blog_bans as bb "
+                     "INNER JOIN users AS u ON bb.user_id=u.id "
+                     "WHERE bb.target_id=$1 "
+                     "AND bb.user_id = ANY($2::BIGINT[]) ORDER BY u.id ASC",
 
         # args: user_id, blog_id, set_by, reason
         insert="INSERT INTO blog_bans (user_id, target_id, set_by, reason) "
@@ -164,13 +175,12 @@ class BlogBanned(Obj):
 
         # Ищем по ID
         if target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % 'AND bb.user_id = ANY($2::BIGINT[])',
-                blog_id, tuple(map(int, target_ids)))
+            resp = await cls._c.select_by_id(
+                conn, blog_id, tuple(map(int, target_ids)))
 
         # Возвращаем все
         else:
-            resp = await conn.fetch(cls._sqls['select'] % '', blog_id)
+            resp = await cls._c.select(conn, blog_id)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -200,16 +210,11 @@ class BlogBanned(Obj):
             raise UserIsModer('ban', 'fandom')
 
         try:
-            await conn.execute(
-                cls._sqls['insert'],
-
-                fields['user_id'], blog_id,
+            await cls._c.e.insert(
+                conn, fields['user_id'], blog_id,
                 user_id, fields['reason'])
         except asyncpg.exceptions.UniqueViolationError:
             raise UserIsBanned('ban', 'blog')
-
-    async def update(self, fields):
-        pass
 
     async def delete(self):
 
@@ -224,16 +229,33 @@ class BlogBanned(Obj):
         ):
             raise Forbidden
 
-        await self._conn.execute(
-            self._sqls['delete'],
-
-            self.id, self.meta['blog_id']
-        )
+        await self._c.e.delete(self._conn, self.id, self.meta['blog_id'])
 
 
 class Blog(Obj):
-    _sqls = dict(
-        select="SELECT * FROM blogs %s ORDER BY id ASC",
+    _c = Commands(
+        select="SELECT * FROM blogs ORDER BY id ASC",
+
+        # args: fandom_id, blog_urls
+        select_by_u_in_fandom="SELECT * FROM blogs "
+                              "WHERE fandom_id = $1 "
+                              "AND url = ANY($2::CITEXT[]) ORDER BY id ASC",
+
+        # args: fandom_id, blog_ids
+        select_by_id_in_fandom="SELECT * FROM blogs "
+                               "WHERE fandom_id = $1"
+                               "AND id = ANY($2::BIGINT[])  ORDER BY id ASC",
+
+        # args: blog_ids
+        select_by_id="SELECT * FROM blogs "
+                     "WHERE id = ANY($1::BIGINT[]) ORDER BY id ASC",
+
+        # args: fandom_id
+        select_by_fandom="SELECT * FROM blogs "
+                         "WHERE fandom_id = $1 ORDER BY id ASC",
+
+        # args: user_id
+        select_by_owner="SELECT * FROM blogs WHERE owner = $1 ORDER BY id ASC",
 
         # args: user_id, fandom_id, url, title, description, avatar
         insert="SELECT blogs_create($1, $2, $3, $4, $5, $6)",
@@ -266,32 +288,25 @@ class Blog(Obj):
 
         # Ищем по url в фандоме
         if u and target_ids and fandom_id:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE url = ANY($1::CITEXT[]) "
-                                      "AND fandom_id = $2",
-                target_ids, fandom_id)
+            resp = await cls._c.select_by_u_in_fandom(
+                conn, fandom_id, target_ids)
 
         # Ищем по ID в фандоме
         elif target_ids and fandom_id:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[]) "
-                                      "AND fandom_id = $2",
-                tuple(map(int, target_ids)), fandom_id)
+            resp = await cls._c.select_by_id_in_fandom(
+                conn, fandom_id, tuple(map(int, target_ids)))
 
         # Ищем по ID
         elif target_ids:
-            resp = await conn.fetch(
-                cls._sqls['select'] % "WHERE id = ANY($1::BIGINT[])",
-                tuple(map(int, target_ids)))
+            resp = await cls._c.select_by_id(conn, tuple(map(int, target_ids)))
 
         # Ищем по фандому
         elif fandom_id:
-            resp = await conn.fetch(
-                cls._sqls['select'] % 'WHERE fandom_id = $1', fandom_id)
+            resp = await cls._c.select_by_fandom(conn, fandom_id)
 
         # Возвращаем все
         else:
-            resp = await conn.fetch(cls._sqls['select'] % '')
+            resp = await cls._c.select(conn)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -300,8 +315,7 @@ class Blog(Obj):
                               user_id: int, target_id: int
                               ) -> Tuple['Blog', ...]:
 
-        resp = await conn.fetch(
-            cls._sqls['select'] % "WHERE owner = $1", target_id)
+        resp = await cls._c.select_by_owner(conn, target_id)
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
@@ -316,8 +330,8 @@ class Blog(Obj):
             raise Forbidden
 
         try:
-            return await conn.fetchval(
-                cls._sqls['insert'], user_id, fandom_id, fields['url'],
+            return await cls._c.insert(
+                conn, user_id, fandom_id, fields['url'],
                 fields['title'], fields['description'], fields['avatar'])
         except asyncpg.exceptions.UniqueViolationError:
             raise BlogUrlAlreadyTaken
@@ -336,8 +350,8 @@ class Blog(Obj):
         ):
             return Forbidden
 
-        await self._conn.execute(
-            self._sqls['update'], self._uid, self.id,
+        await self._c.e.update(
+            self._conn, self._uid, self.id,
             fields['title'], fields['description'], fields['avatar'])
 
     async def history(self) -> Tuple['Blog', ...]:
@@ -354,7 +368,7 @@ class Blog(Obj):
         ):
             raise Forbidden
 
-        resp = await self._conn.fetch(self._sqls['history'], self.id)
+        resp = await self._c.history(self._conn, self.id)
 
         return SelectResult(self.__class__(x) for x in resp)
 

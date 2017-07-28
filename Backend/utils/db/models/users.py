@@ -21,10 +21,12 @@ class User(Obj):
         select="SELECT * FROM users ORDER BY id LIMIT 20 OFFSET $1",
 
         # args: usernames
-        select_by_u="SELECT * FROM users WHERE username = ANY($1::CITEXT[])",
+        select_by_u="SELECT * FROM users WHERE username = ANY($1::CITEXT[]) "
+                    "ORDER BY id",
 
         # args: ids
-        select_by_id="SELECT * FROM users WHERE id = ANY($1::BIGINT[])",
+        select_by_id="SELECT * FROM users WHERE id = ANY($1::BIGINT[]) "
+                     "ORDER BY id",
 
         # args: edited_by, user_id, description, avatar
         update="UPDATE users SET edited_by=$1, description=$3, "
@@ -84,7 +86,7 @@ class User(Obj):
         ):
             raise Forbidden
 
-        await self._c.update(
+        await self._c.e.update(
             self._conn, self._uid, self.id,
             fields['description'], fields['avatar'])
 
