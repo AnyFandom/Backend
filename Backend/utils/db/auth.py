@@ -8,32 +8,42 @@ import asyncpg
 from passlib.hash import pbkdf2_sha256
 
 from ..web.exceptions import UsernameAlreadyTaken, AuthFail
+from .models.base import Commands
 
-_sqls = dict(
+_c = Commands(
+    # args: username, password_hash
     register="SELECT * FROM users_create ($1, $2)",
+
+    # args: username
     login="SELECT * FROM auth WHERE username = $1::CITEXT",
-    check_random="SELECT random = $1::UUID FROM auth WHERE id = $2",
+
+    # args: user_id, random
+    check_random="SELECT random = $2::UUID FROM auth WHERE id = $1",
+
+    # args: user_id
     reset_random="UPDATE auth SET random = DEFAULT WHERE id = $1",
-    change="UPDATE auth SET password_hash = $1 WHERE id = $2"
+
+    # args: user_id, password_hash
+    change="UPDATE auth SET password_hash = $2 WHERE id = $1"
 )
 
 
 async def _reset_random(conn: asyncpg.connection.Connection, user_id: int):
-    await conn.execute(_sqls['reset_random'], user_id)
+    await _c.e.reset_random(conn, user_id)
 
 
 async def register(conn: asyncpg.connection.Connection,
                    username: str, password: str) -> int:
     try:
-        return await conn.fetchval(
-            _sqls['register'], username, pbkdf2_sha256.hash(password))
+        return await _c.v.register(
+            conn, username, pbkdf2_sha256.hash(password))
     except asyncpg.exceptions.UniqueViolationError:
         raise UsernameAlreadyTaken
 
 
 async def login(conn: asyncpg.connection.Connection,
                 username: str, password: str) -> Tuple[int, uuid.UUID]:
-    data = await conn.fetchrow(_sqls['login'], username)
+    data = await _c.r.login(conn, username)
 
     if not data or not pbkdf2_sha256.verify(password, data['password_hash']):
         raise AuthFail
@@ -43,8 +53,8 @@ async def login(conn: asyncpg.connection.Connection,
 
 async def check_random(conn: asyncpg.connection.Connection,
                        user_id: int, random: bytes) -> bool:
-    return await conn.fetchval(
-        _sqls['check_random'], uuid.UUID(bytes=random), user_id)
+
+    return await _c.v.check_random(conn, user_id, uuid.UUID(bytes=random))
 
 
 async def invalidate(conn: asyncpg.connection.Connection,
@@ -59,5 +69,4 @@ async def change(conn: asyncpg.connection.Connection,
     user_id, _ = await login(conn, username, password)
 
     await _reset_random(conn, user_id)
-    await conn.execute(
-        _sqls['change'], pbkdf2_sha256.hash(new_password), user_id)
+    await _c.e.change(conn, user_id, pbkdf2_sha256.hash(new_password))

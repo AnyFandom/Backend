@@ -32,7 +32,7 @@ class Obj:
     _meta: tuple = None
 
     @classmethod
-    def _map(cls, data) -> dict:
+    def _map(cls, data: dict) -> dict:
         resp = dict(type=cls._type, id=data.pop('id'))
 
         if cls._meta is not None:
@@ -41,3 +41,29 @@ class Obj:
         resp['attributes'] = data
 
         return resp
+
+
+class Commands:
+    def __init__(self, __type=0, **sqls: str):
+        self._sqls = sqls
+        self._type = __type
+
+        if __type == 0:  # fetch
+            self.e = Commands(1, **sqls)  # execute
+            self.v = Commands(2, **sqls)  # fetchval
+            self.r = Commands(3, **sqls)  # fetchrow
+
+    def __getattr__(self, item):
+        async def func(conn, *args):
+
+            if self._type == 0:
+                return await conn.fetch(self._sqls[item], *args)
+            elif self._type == 1:
+                return await conn.execute(self._sqls[item], *args)
+            elif self._type == 2:
+                return await conn.fetchval(self._sqls[item], *args)
+            else:
+                return await conn.fetchrow(self._sqls[item], *args)
+
+        return func
+
