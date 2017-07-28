@@ -112,7 +112,7 @@ upgrade: |
   ) RETURNS SETOF fandoms AS $$
 
     SELECT * FROM fandoms WHERE id = target_id
-    UNION
+    UNION ALL
     SELECT
       f.id,
       f.created_at,

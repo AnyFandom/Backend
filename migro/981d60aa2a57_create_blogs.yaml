@@ -111,7 +111,7 @@ upgrade: |
   ) RETURNS SETOF blogs AS $$
 
     SELECT * FROM blogs WHERE id = target_id
-    UNION
+    UNION ALL
     SELECT
       b.id,
       b.created_at,

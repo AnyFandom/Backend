@@ -84,7 +84,7 @@ upgrade: |
   ) RETURNS SETOF posts AS $$
 
     SELECT * FROM posts WHERE id = target_id
-    UNION
+    UNION ALL
     SELECT
       p.id,
       p.created_at,
