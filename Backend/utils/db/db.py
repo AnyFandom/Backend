@@ -32,5 +32,3 @@ class DB:
 
     async def close(self):
         await self._pool.close()
-
-

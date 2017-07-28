@@ -33,7 +33,7 @@ async def user(conn: asyncpg.connection.Connection, user_id: int) -> bool:
     return await conn.fetchval(_sqls['user'], user_id)
 
 async def admin(conn: asyncpg.connection.Connection,
-                     user_id: int) -> bool:
+                user_id: int) -> bool:
 
     return await conn.fetchval(_sqls['user_admin'], user_id)
 

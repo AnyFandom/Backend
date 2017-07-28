@@ -395,4 +395,3 @@ class Fandom(Obj):
 
         return await Post.select(
             self._conn, self._uid, 0, self.id, *target_ids)
-
