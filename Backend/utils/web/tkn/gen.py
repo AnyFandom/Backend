@@ -38,4 +38,7 @@ def decode(token: bytes, *, key: bytes) -> tuple:
     if not hmac.compare_digest(b64d(sign), _sign(fmt + b'.' + body, key)):
         raise InvalidToken
 
-    return struct.unpack(fmt.decode('utf-8'), b64d(body))
+    try:
+        return struct.unpack(fmt.decode('utf-8'), b64d(body))
+    except struct.error:
+        raise InvalidToken
