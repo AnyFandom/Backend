@@ -9,7 +9,7 @@ __all__ = ('UserList', 'User', 'UserHistory', 'UserBlogList', 'UserPostList')
 
 class UserList(BaseView):
     @json_response
-    @v.get_query(v.users.select)
+    @v.get_query(v.base.page)
     async def get(self, query):
         return await m.User.select(
             self.request.conn, self.request.uid, page=query['page'])
