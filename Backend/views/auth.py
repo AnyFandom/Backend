@@ -19,7 +19,7 @@ async def register(request, body):
     new_id = await db.auth.register(
         request.conn, body['username'], body['password']
     )
-    loc = '/users/%i' % new_id
+    loc = f'/users/{new_id}'
 
     return {'Location': loc}, 201, {'Location': loc}
 

@@ -26,7 +26,7 @@ class Obj:
         return self._data['meta']
 
     def __repr__(self):
-        return '<%s id=%i>' % (type(self).__name__, self.id)
+        return f'<{type(self).__name__} id={self.id}>'
 
     _type = ''
     _meta: tuple = None

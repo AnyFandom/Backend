@@ -19,19 +19,19 @@ def _check(statement: bool, text: str):
 
 
 def string(val: Any, mn: int=None, mx: int=None) -> str:
-    _check(isinstance(val, str), 'Expected str, got %s' % type(val).__name__)
+    _check(isinstance(val, str), f'Expected str, got {type(val).__name__}')
     if mn and mx:
         _check(
             mn <= len(val) <= mx,
-            'Must be at least %i characters long and maximum of %i. got %i' % (
-                mn, mx, len(val))
+            f'Must be at least {mn} characters long and '
+            f'maximum of {mx}. Got {len(val)}'
         )
 
     return val
 
 
 def integer(val: Any) -> int:
-    _check(isinstance(val, int), 'Expected int, got %s' % type(val).__name__)
+    _check(isinstance(val, int), f'Expected int, got {type(val).__name__}')
     return val
 
 
@@ -43,7 +43,7 @@ def qinteger(val: Any) -> int:
 
 
 def boolean(val: Any) -> bool:
-    _check(isinstance(val, bool), 'Expected bool, got %s' % type(val).__name__)
+    _check(isinstance(val, bool), f'Expected bool, got {type(val).__name__}')
     return val
 
 
@@ -79,7 +79,7 @@ class Validator:
             try:
                 parsed = field(obj)
             except _ValErr as exc:
-                errs.append('%s: %s' % (field.name, str(exc)))
+                errs.append(f'{field.name}: {str(exc)}')
                 continue
 
             resp[field.name] = parsed

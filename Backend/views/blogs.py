@@ -42,7 +42,7 @@ class BlogModerList(BaseView):
     @v.get_body(v.blogs.moders_insert)
     async def post(self, body):
         ids = await (await m.Blog.id_u(self.request)).moders_insert(body)
-        loc = '/blogs/%i/moders/%i' % ids
+        loc = f'/blogs/{ids[0]}/moders/{ids[1]}'
 
         return {'Location': loc}, 201, {'Location': loc}
 
@@ -74,7 +74,7 @@ class BlogBannedList(BaseView):
     @v.get_body(v.blogs.bans_insert)
     async def post(self, body):
         ids = await (await m.Blog.id_u(self.request)).bans_insert(body)
-        loc = '/blogs/%i/bans/%i' % ids
+        loc = f'/blogs/{ids[0]}/bans/{ids[1]}'
 
         return {'Location': loc}, 201, {'Location': loc}
 
@@ -98,6 +98,6 @@ class BlogPostList(BaseView):
     @v.get_body(v.posts.insert)
     async def post(self, body):
         new_id = await (await m.Blog.id_u(self.request)).posts_insert(body)
-        loc = '/posts/%i' % new_id
+        loc = f'/posts/{new_id}'
 
         return {'Location': loc}, 201, {'Location': loc}

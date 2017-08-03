@@ -22,7 +22,7 @@ class FandomList(BaseView):
         new_id = await m.Fandom.insert(
             self.request.conn, self.request.uid, body)
 
-        loc = '/fandoms/%i' % new_id
+        loc = f'/fandoms/{new_id}'
 
         return {'Location': loc}, 201, {'Location': loc}
 
@@ -53,7 +53,7 @@ class FandomModerList(BaseView):
     @v.get_body(v.fandoms.moders_insert)
     async def post(self, body):
         ids = await (await m.Fandom.id_u(self.request)).moders_insert(body)
-        loc = '/fandoms/%i/moders/%i' % ids
+        loc = f'/fandoms/{ids[0]}/moders/{ids[1]}'
 
         return {'Location': loc}, 201, {'Location': loc}
 
@@ -85,7 +85,7 @@ class FandomBannedList(BaseView):
     @v.get_body(v.fandoms.bans_insert)
     async def post(self, body):
         ids = await (await m.Fandom.id_u(self.request)).bans_insert(body)
-        loc = '/fandoms/%i/bans/%i' % ids
+        loc = f'/fandoms/{ids[0]}/bans/{ids[1]}'
 
         return {'Location': loc}, 201, {'Location': loc}
 
@@ -111,7 +111,7 @@ class FandomBlogList(BaseView):
     @v.get_body(v.blogs.insert)
     async def post(self, body):
         new_id = await (await m.Fandom.id_u(self.request)).blogs_insert(body)
-        loc = '/blogs/%i' % new_id
+        loc = f'/blogs/{new_id}'
 
         return {'Location': loc}, 201, {'Location': loc}
 
