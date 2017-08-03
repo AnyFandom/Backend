@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys
+
 
 # Страшный костыль
 class SelectResult(tuple):
@@ -44,26 +46,34 @@ class Obj:
 
 
 class Commands:
-    def __init__(self, __type=0, **sqls: str):
-        self._sqls = sqls
-        self._type = __type
+    def __new__(cls, __type: int=0, **sqls: str):
+        if __type == 0:
+            action = 'fetch'
+        elif __type == 1:
+            action = 'execute'
+        elif __type == 2:
+            action = 'fetchval'
+        else:
+            action = 'fetchrow'
 
-        if __type == 0:  # fetch
-            self.e = Commands(1, **sqls)  # execute
-            self.v = Commands(2, **sqls)  # fetchval
-            self.r = Commands(3, **sqls)  # fetchrow
+        definition = 'class _Commands:\n'
 
-    def __getattr__(self, item):
-        async def func(conn, *args):
+        for (key, val) in sqls.items():
+            definition += f'    @staticmethod\n' \
+                          f'    async def {key}(conn, *args):\n' \
+                          f'        return await conn.{action}(\n' \
+                          f'            {repr(val)}, *args\n' \
+                          f'        )\n\n'
 
-            if self._type == 0:
-                return await conn.fetch(self._sqls[item], *args)
-            elif self._type == 1:
-                return await conn.execute(self._sqls[item], *args)
-            elif self._type == 2:
-                return await conn.fetchval(self._sqls[item], *args)
-            else:
-                return await conn.fetchrow(self._sqls[item], *args)
+        if __type == 0:
+            definition += f'    e = Commands(1, **{str(sqls)})\n'\
+                          f'    v = Commands(2, **{str(sqls)})\n'\
+                          f'    r = Commands(3, **{str(sqls)})\n'
 
-        return func
+        local = dict()
+
+        exec(definition, globals(), local)
+        result = local['_Commands']
+
+        return result
 
