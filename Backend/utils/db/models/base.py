@@ -38,7 +38,9 @@ class Obj:
         resp = dict(type=cls._type, id=data.pop('id'))
 
         if cls._meta is not None:
-            resp['meta'] = {x: data.pop(x) for x in cls._meta if x in data}
+            _m = {x: data.pop(x) for x in cls._meta if x in data}
+            if _m:
+                resp['meta'] = _m
 
         resp['attributes'] = data
 
