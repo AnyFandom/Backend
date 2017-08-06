@@ -9,7 +9,7 @@ from . import checks as C
 from .base import Obj, SelectResult, Commands
 from ...web.exceptions import Forbidden, ObjectNotFound
 
-__all__ = ('Post',)
+__all__ = ('Post', 'PostVote')
 
 
 class Post(Obj):
@@ -50,10 +50,13 @@ class Post(Obj):
                "title=$3, content=$4 WHERE id=$2",
 
         # args: post_id
-        history="SELECT * FROM posts_history($1) ORDER BY edited_by DESC"
+        history="SELECT id, created_at, edited_at, edited_by, blog_id, "
+                "fandom_id, owner, title, content "
+                "FROM posts_history($1) ORDER BY edited_by DESC"
     )
 
     _type = 'posts'
+    _meta = ('votes_up', 'votes_down')
 
     @classmethod
     async def id_u(cls, request) -> 'Post':
@@ -191,21 +194,10 @@ class PostVote(Obj):
         select_by_id="SELECT u.*, pv.target_id AS post_id, pv.vote "
                      "FROM posts_votes AS pv "
                      "INNER JOIN users AS u ON pv.user_id=u.id "
-                     "WHERE user_id=$1 "
-                     "AND target_id=$2 ORDER BY pv.user_id ASC",
-
-        # args: post_id
-        select_short="SELECT COUNT(*) filter (WHERE vote) AS up, "
-                     "COUNT(*) filter (WHERE NOT vote) AS down "
-                     "WHERE target_id=$1",
+                     "WHERE user_id=$1 AND target_id=$2",
 
         # args: user_id, post_id, vote
-        insert="INSERT INTO posts_votes AS pv (user_id, target_id, vote)"
-               "VALUES ($1, $2, $3) "
-               "ON CONFLICT (target_id, user_id) DO "
-               "UPDATE SET vote=EXCLUDED.vote "
-               "WHERE pv.target_id=EXCLUDED.target_id "
-               "AND pv.user_id=EXCLUDED.user_id"
+        insert="SELECT posts_vote ($1, $2, $3)"
     )
 
     _type = 'users'
@@ -218,7 +210,7 @@ class PostVote(Obj):
         if await C.admin(conn, user_id):
             resp = await cls._c.select(conn, int(post_id))
         else:
-            resp = await cls._c.select_by_id(conn, user_id, int(user_id))
+            resp = await cls._c.select_by_id(conn, user_id, int(post_id))
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 

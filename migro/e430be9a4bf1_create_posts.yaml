@@ -16,7 +16,9 @@ upgrade: |
     fandom_id  BIGINT                    NOT NULL,
     owner      BIGINT                    NOT NULL,
     title      TEXT                      NOT NULL,
-    content    TEXT                      NOT NULL
+    content    TEXT                      NOT NULL,
+    votes_up   INT DEFAULT 0             NOT NULL,
+    votes_down INT DEFAULT 0             NOT NULL
   );
   CREATE INDEX ON posts (blog_id);
   CREATE INDEX ON posts (fandom_id);
@@ -45,6 +47,10 @@ upgrade: |
 
   CREATE FUNCTION posts_update () RETURNS TRIGGER AS $$
     BEGIN
+
+      IF (NEW.votes_up, NEW.votes_down) != (OLD.votes_up, OLD.votes_down) THEN
+        RETURN NEW;
+      END IF;
 
       NEW.edited_at = now();
       NEW.title = COALESCE(NEW.title, OLD.title);
@@ -94,7 +100,9 @@ upgrade: |
       p.fandom_id,
       p.owner,
       ph.title,
-      ph.content
+      ph.content,
+      0,
+      0
     FROM posts_history AS ph
     INNER JOIN posts AS p ON ph.id = p.id
     WHERE ph.id = target_id;
@@ -109,6 +117,38 @@ upgrade: |
     vote      BOOLEAN
   );
   CREATE INDEX ON posts_votes (vote);
+
+  CREATE FUNCTION posts_vote(
+    user_id   BIGINT,
+    target_id BIGINT,
+    vote      BOOLEAN
+  ) RETURNS void AS $$
+    #variable_conflict use_variable
+    BEGIN
+
+      INSERT INTO posts_votes VALUES (target_id, user_id, vote);
+
+      IF vote THEN
+        UPDATE posts SET votes_up = votes_up + 1 WHERE id = target_id;
+      ELSE
+        UPDATE posts SET votes_down = votes_down + 1 WHERE id = target_id;
+      END IF;
+
+    EXCEPTION
+      WHEN unique_violation THEN
+
+        UPDATE posts_votes AS pv SET vote = vote WHERE pv.target_id = target_id AND pv.user_id = user_id AND pv.vote != vote;
+
+        IF FOUND THEN
+          IF vote THEN
+            UPDATE posts SET votes_up = votes_up + 1, votes_down = votes_down - 1 WHERE id = target_id;
+          ELSE
+            UPDATE posts SET votes_down = votes_down + 1, votes_up = votes_up - 1 WHERE id = target_id;
+          END IF;
+        END IF;
+
+    END;
+  $$ LANGUAGE plpgsql;
 
 downgrade: |
   DROP TABLE posts_votes;
