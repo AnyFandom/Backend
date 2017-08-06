@@ -122,7 +122,7 @@ class Post(Obj):
         ):
             raise Forbidden
 
-        return await cls._c.insert(
+        return await cls._c.v.insert(
             conn, user_id, blog_id, fandom_id,
             fields['title'], fields['content'])
 

@@ -330,7 +330,7 @@ class Blog(Obj):
             raise Forbidden
 
         try:
-            return await cls._c.insert(
+            return await cls._c.v.insert(
                 conn, user_id, fandom_id, fields['url'],
                 fields['title'], fields['description'], fields['avatar'])
         except asyncpg.exceptions.UniqueViolationError:
