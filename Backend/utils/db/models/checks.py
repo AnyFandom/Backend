@@ -32,10 +32,12 @@ _sqls = dict(
 async def user(conn: asyncpg.connection.Connection, user_id: int) -> bool:
     return await conn.fetchval(_sqls['user'], user_id)
 
+
 async def admin(conn: asyncpg.connection.Connection,
                 user_id: int) -> bool:
 
     return await conn.fetchval(_sqls['user_admin'], user_id)
+
 
 async def fandom_moder(conn: asyncpg.connection.Connection, user_id: int,
                        fandom_id: int, perm: str=None) -> bool:
@@ -44,10 +46,12 @@ async def fandom_moder(conn: asyncpg.connection.Connection, user_id: int,
         _sqls['fandom_moder'] % ('AND %s=TRUE' % perm) if perm else '',
         user_id, fandom_id)
 
+
 async def fandom_banned(conn: asyncpg.connection.Connection, user_id: int,
                         fandom_id: int) -> bool:
 
     return await conn.fetchval(_sqls['fandom_banned'], user_id, fandom_id)
+
 
 async def blog_moder(conn: asyncpg.connection.Connection, user_id: int,
                      blog_id: int, perm: str=None) -> bool:
@@ -56,10 +60,12 @@ async def blog_moder(conn: asyncpg.connection.Connection, user_id: int,
         _sqls['blog_moder'] % ('AND %s=TRUE' % perm) if perm else '',
         user_id, blog_id)
 
+
 async def blog_banned(conn: asyncpg.connection.Connection, user_id: int,
                       blog_id: int) -> bool:
 
     return await conn.fetchval(_sqls['blog_banned'], user_id, blog_id)
+
 
 async def blog_owner(conn: asyncpg.connection.Connection, user_id: int,
                      blog_id: int) -> bool:

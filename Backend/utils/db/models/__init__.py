@@ -6,7 +6,7 @@ from .fandoms import *  # noqa
 from .blogs import *  # noqa
 from .posts import *  # noqa
 
-__all__ = (users.__all__ +
-           fandoms.__all__ +
-           blogs.__all__ +
-           posts.__all__)
+__all__ = (users.__all__ +  # noqa
+           fandoms.__all__ +  # noqa
+           blogs.__all__ +  # noqa
+           posts.__all__)  # noqa

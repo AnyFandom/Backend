@@ -138,6 +138,7 @@ commands:
       migrate: !Command
         container: backend
         run: |
+          set -e
           touch /locks/.dbstart.lock
           while [ -f /locks/.dbstart.lock ]; do sleep 0.2; done
           migro checkout head
@@ -156,6 +157,7 @@ commands:
       migrate: !Command
         container: backend
         run: |
+          set -e
           touch /locks/.dbstart.lock
           while [ -f /locks/.dbstart.lock ]; do sleep 0.2; done
           migro checkout head

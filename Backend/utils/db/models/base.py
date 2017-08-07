@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys
-
 
 # Страшный костыль
 class SelectResult(tuple):
@@ -78,4 +76,3 @@ class Commands:
         result = local['_Commands']
 
         return result
-
