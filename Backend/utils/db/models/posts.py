@@ -16,30 +16,20 @@ class Post(Obj):
     _c = Commands(
         select="SELECT * FROM posts ORDER BY id ASC",
 
-        # args: blog_id, post_ids
-        select_by_id_in_blog="SELECT * FROM posts "
-                             "WHERE blog_id=$1 "
-                             "AND id = ANY($2::BIGINT[]) ORDER BY id ASC",
-
-        # args: fandom_id, post_ids
-        select_by_id_in_fandom="SELECT * FROM posts "
-                               "WHERE fandom_id=$1 "
-                               "AND id = ANY($2::BIGINT[]) ORDER BY id ASC",
-
         # args: post_ids
-        select_by_id="SELECT * FROM posts "
-                     "WHERE id = ANY($1::BIGINT[]) ORDER BY id ASC",
+        select_by_id="SELECT * FROM posts WHERE id = ANY($1::BIGINT[]) "
+                     "ORDER BY id ASC",
 
         # args: blog_id
-        select_by_blog="SELECT * FROM posts "
-                       "WHERE blog_id=$1 ORDER BY id ASC",
+        select_by_blog="SELECT * FROM posts WHERE blog_id = $1 "
+                       "ORDER BY id ASC",
 
         # args: fandom_id
-        select_by_fandom="SELECT * FROM posts "
-                         "WHERE fandom_id=$1 ORDER BY id ASC",
+        select_by_fandom="SELECT * FROM posts WHERE fandom_id = $1 "
+                         "ORDER BY id ASC",
 
         # args: user_id
-        select_by_owner="SELECT * FROM posts WHERE owner=$1 ORDER BY id ASC",
+        select_by_owner="SELECT * FROM posts WHERE owner = $1 ORDER BY id ASC",
 
         # args: user_id, blog_id, fandom_id, title, content
         insert="SELECT posts_create($1, $2, $3, $4, $5)",
@@ -73,21 +63,8 @@ class Post(Obj):
                      blog_id: int, fandom_id: int,
                      *target_ids: Union[int, str]) -> Tuple['Post', ...]:
 
-        assert (blog_id and fandom_id) or (not blog_id and not fandom_id),\
-            'blog_id или fandom_id, НЕ ОБА'
-
-        # Ищем по ID в блоге
-        if target_ids and blog_id:
-            resp = await cls._c.select_by_id_in_blog(
-                conn, blog_id, tuple(map(int, target_ids)))
-
-        # Ищем по ID в фандоме
-        elif target_ids and fandom_id:
-            resp = await cls._c.select_by_id_in_fandom(
-                conn, fandom_id, tuple(map(int, target_ids)))
-
         # Ищем по ID
-        elif target_ids:
+        if target_ids:
             resp = await cls._c.select_by_id(conn, tuple(map(int, target_ids)))
 
         # Ищем по блогу
