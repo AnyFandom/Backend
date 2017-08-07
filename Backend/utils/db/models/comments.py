@@ -9,72 +9,78 @@ from . import checks as C
 from .base import Obj, SelectResult, Commands
 from ...web.exceptions import Forbidden, ObjectNotFound
 
-from .comments import Comment
-
-__all__ = ('Post', 'PostVote')
+__all__ = ('Comment', 'CommentVote')
 
 
-class Post(Obj):
+class Comment(Obj):
     _c = Commands(
-        select="SELECT * FROM posts ORDER BY id ASC",
+        select="SELECT * FROM comments ORDER BY id ASC",
 
-        # args: post_ids
-        select_by_id="SELECT * FROM posts WHERE id = ANY($1::BIGINT[]) "
+        # args: comment_ids
+        select_by_id="SELECT * FROM comments WHERE id = ANY($1::BIGINT[]) "
                      "ORDER BY id ASC",
 
+        # args: post_id
+        select_by_post="SELECT * FROM comments WHERE post_id = $1 "
+                       "ORDER BY id ASC",
+
         # args: blog_id
-        select_by_blog="SELECT * FROM posts WHERE blog_id = $1 "
+        select_by_blog="SELECT * FROM comments WHERE blog_id = $1 "
                        "ORDER BY id ASC",
 
         # args: fandom_id
-        select_by_fandom="SELECT * FROM posts WHERE fandom_id = $1 "
+        select_by_fandom="SELECT * FROM comments WHERE fandom_id = $1 "
                          "ORDER BY id ASC",
 
         # args: user_id
-        select_by_owner="SELECT * FROM posts WHERE owner = $1 ORDER BY id ASC",
+        select_by_owner="SELECT * FROM comments WHERE owner = $1 "
+                        "ORDER BY id ASC",
 
-        # args: user_id, blog_id, fandom_id, title, content
-        insert="SELECT posts_create($1, $2, $3, $4, $5)",
+        # args: user_id, post_id, blog_id, fandom_id, content
+        insert="SELECT comments_create ($1, $2, $3, $4, $5)",
 
-        # args: user_id, post_id, title, content
-        update="UPDATE posts SET edited_by=$1, "
-               "title=$3, content=$4 WHERE id=$2",
+        # args: user_id, post_id, content
+        update="UPDATE comments SET edited_by=$1, content=$3 WHERE id = $2",
 
         # args: post_id
-        history="SELECT id, created_at, edited_at, edited_by, blog_id, "
-                "fandom_id, owner, title, content "
-                "FROM posts_history($1) ORDER BY edited_at DESC"
+        history="SELECT id, created_at, edited_at, edited_by, post_id, "
+                "blog_id, fandom_id, owner, content "
+                "FROM comments_history ($1) ORDER BY edited_at DESC"
     )
 
-    _type = 'posts'
+    _type = 'comments'
     _meta = ('votes_up', 'votes_down')
 
     @classmethod
-    async def id_u(cls, request) -> 'Post':
+    async def id_u(cls, request) -> 'Comment':
         conn = request.conn
-        post = request.match_info['post']
+        comment = request.match_info['comment']
         uid = request.uid
 
         try:
-            return (await cls.select(conn, uid, 0, 0, post))[0]
+            return (await cls.select(conn, uid, 0, 0, 0, comment))[0]
         except (IndexError, ValueError):
             raise ObjectNotFound
 
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
-                     blog_id: int, fandom_id: int,
-                     *target_ids: Union[int, str]) -> Tuple['Post', ...]:
+                     post_id: int, blog_id: int, fandom_id: int,
+                     *target_ids: Union[int, str]) -> Tuple['Comment', ...]:
 
         # Ищем по ID
         if target_ids:
             resp = await cls._c.select_by_id(conn, tuple(map(int, target_ids)))
 
+        # Ищем по посту
+        elif post_id:
+            resp = await cls._c.select_by_post(conn, post_id)
+
         # Ищем по блогу
-        elif blog_id:
+        elif post_id:
             resp = await cls._c.select_by_blog(conn, blog_id)
 
         # Ищем по фандому
-        elif fandom_id:
+        elif post_id:
             resp = await cls._c.select_by_fandom(conn, fandom_id)
 
         # Возвращаем все
@@ -86,7 +92,7 @@ class Post(Obj):
     @classmethod
     async def select_by_owner(cls, conn: asyncpg.connection.Connection,
                               user_id: int, target_id: int
-                              ) -> Tuple['Post', ...]:
+                              ) -> Tuple['Comment', ...]:
 
         resp = await cls._c.select_by_owner(conn, target_id)
 
@@ -94,7 +100,8 @@ class Post(Obj):
 
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
-                     blog_id: int, fandom_id: int, fields: dict) -> int:
+                     post_id: int, blog_id: int, fandom_id: int, fields: dict
+                     ) -> int:
 
         # Проверка
         if (
@@ -105,8 +112,7 @@ class Post(Obj):
             raise Forbidden
 
         return await cls._c.v.insert(
-            conn, user_id, blog_id, fandom_id,
-            fields['title'], fields['content'])
+            conn, user_id, post_id, blog_id, fandom_id, fields['content'])
 
     async def update(self, fields: dict):
 
@@ -116,19 +122,18 @@ class Post(Obj):
             not await C.blog_owner(
                 self._conn, self._uid, self.attrs['blog_id']) and
             not await C.blog_moder(
-                self._conn, self._uid, self.attrs['blog_id'], 'edit_p') and
+                self._conn, self._uid, self.attrs['blog_id'], 'edit_c') and
             not await C.fandom_moder(
-                self._conn, self._uid, self.attrs['fandom_id'], 'edit_p') and
+                self._conn, self._uid, self.attrs['fandom_id'], 'edit_c') and
             not await C.admin(
                 self._conn, self._uid)
         ):
             raise Forbidden
 
         await self._c.e.update(
-            self._conn, self._uid, self.id,
-            fields['title'], fields['content'])
+            self._conn, self._uid, self.id, fields['content'])
 
-    async def history(self) -> Tuple['Post', ...]:
+    async def history(self) -> Tuple['Comment', ...]:
 
         # Проверка
         if (
@@ -136,9 +141,9 @@ class Post(Obj):
             not await C.blog_owner(
                 self._conn, self._uid, self.attrs['blog_id']) and
             not await C.blog_moder(
-                self._conn, self._uid, self.attrs['blog_id'], 'edit_p') and
+                self._conn, self._uid, self.attrs['blog_id'], 'edit_c') and
             not await C.fandom_moder(
-                self._conn, self._uid, self.attrs['fandom_id'], 'edit_p') and
+                self._conn, self._uid, self.attrs['fandom_id'], 'edit_c') and
             not await C.admin(
                 self._conn, self._uid)
         ):
@@ -150,45 +155,31 @@ class Post(Obj):
 
     # Votes
 
-    async def votes_select(self) -> Tuple['PostVote', ...]:
-        return await PostVote.select(self._conn, self._uid, self.id)
+    async def votes_select(self) -> Tuple['CommentVote', ...]:
+        return await CommentVote.select(self._conn, self._uid, self.id)
 
     async def votes_insert(self, fields: dict):
-        await PostVote.insert(
+        await CommentVote.insert(
             self._conn, self._uid, self.id,
-            self.attrs['blog_id'], self.attrs['fandom_id'], fields)
-
-    # Comments
-
-    async def comments_select(self, *target_ids: Union[int, str]
-                              ) -> Tuple[Comment, ...]:
-
-        return await Comment.select(
-            self._conn, self._uid, self.id, 0, 0, *target_ids)
-
-    async def comments_insert(self, fields: dict) -> int:
-
-        return await Comment.insert(
-            self._conn, self._uid, self.id, self.attrs['blog_id'],
-            self.attrs['fandom_id'], fields)
+            self.arrts['blog_id'], self.attrs['fandom_id'], fields)
 
 
-class PostVote(Obj):
+class CommentVote(Obj):
     _c = Commands(
-        # args: post_id
-        select="SELECT u.*, pv.target_id AS post_id, pv.vote "
-               "FROM posts_votes AS pv "
-               "INNER JOIN users AS u ON pv.user_id=u.id "
-               "WHERE target_id=$1 ORDER BY pv.user_id ASC",
+        # args: comment_id
+        select="SELECT u.*, cv.target_id AS comment_id, cv.vote "
+               "FROM comment_votes AS cv "
+               "INNER JOIN users AS u ON cv.user_id = u.id "
+               "WHERE target_id = $1 ORDER BY cv.user_id ASC",
 
-        # args: user_id, post_id
-        select_by_id="SELECT u.*, pv.target_id AS post_id, pv.vote "
-                     "FROM posts_votes AS pv "
-                     "INNER JOIN users AS u ON pv.user_id=u.id "
-                     "WHERE user_id=$1 AND target_id=$2",
+        # args: user_id, comment_id
+        select_by_id="SELECT u.*, cv.target_id AS comment_id, cv.vote "
+                     "FROM comment_votes AS cv "
+                     "INNER JOIN users AS u ON cv.user_id = u.id "
+                     "WHERE user_id = $1 AND target_id = $2",
 
-        # args: user_id, post_id, vote
-        insert="SELECT posts_vote ($1, $2, $3)"
+        # args: user_id, target_id, vote
+        insert="SELECT comments_vote ($1, $2, $3)"
     )
 
     _type = 'users'
@@ -196,19 +187,20 @@ class PostVote(Obj):
 
     @classmethod
     async def select(cls, conn: asyncpg.connection.Connection, user_id: int,
-                     post_id: Union[int, str]) -> Tuple['PostVote', ...]:
+                     comment_id: int) -> Tuple['CommentVote', ...]:
 
         # Только админам можно смотреть кто голосовал
         if await C.admin(conn, user_id):
-            resp = await cls._c.select(conn, int(post_id))
+            resp = await cls._c.select(conn, int(comment_id))
         else:
-            resp = await cls._c.select_by_id(conn, user_id, int(post_id))
+            resp = await cls._c.select_by_id(conn, user_id, int(comment_id))
 
         return SelectResult(cls(x, conn, user_id) for x in resp)
 
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
-                     post_id: int, blog_id: int, fandom_id: int, fields: dict):
+                     comment_id: int, blog_id: int, fandom_id: int,
+                     fields: dict):
 
         # Проверка
         if (
@@ -218,4 +210,5 @@ class PostVote(Obj):
         ):
             raise Forbidden
 
-        await cls._c.e.insert(conn, user_id, post_id, fields['vote'])
+        await cls._c.insert(conn, user_id, comment_id, fields['vote'])
+

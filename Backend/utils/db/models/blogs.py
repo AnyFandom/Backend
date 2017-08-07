@@ -10,6 +10,7 @@ from .base import Obj, SelectResult, Commands
 from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, UserIsOwner, BlogUrlAlreadyTaken)
 from .posts import Post
+from .comments import Comment
 
 __all__ = ('BlogModer', 'BlogBanned', 'Blog')
 
@@ -430,3 +431,11 @@ class Blog(Obj):
 
         return await Post.insert(
             self._conn, self._uid, self.id, self.attrs['fandom_id'], fields)
+
+    # Comments
+
+    async def comments_select(self, *target_ids: Union[int, str]
+                              ) -> Tuple[Comment, ...]:
+
+        return await Comment.select(
+            self._conn, self._uid, 0, self.id, 0, *target_ids)

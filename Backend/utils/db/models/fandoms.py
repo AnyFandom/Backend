@@ -11,6 +11,7 @@ from ...web.exceptions import (Forbidden, ObjectNotFound, UserIsBanned,
                                UserIsModer, FandomUrlAlreadyTaken)
 from .blogs import Blog
 from .posts import Post
+from .comments import Comment
 
 __all__ = ('FandomModer', 'FandomBanned', 'Fandom')
 
@@ -397,3 +398,11 @@ class Fandom(Obj):
 
         return await Post.select(
             self._conn, self._uid, 0, self.id, *target_ids)
+
+    # Comments
+
+    async def comments_select(self, *target_ids: Union[int, str]
+                              ) -> Tuple[Comment, ...]:
+
+        return await Comment.select(
+            self._conn, self._uid, 0, 0, self.id, *target_ids)

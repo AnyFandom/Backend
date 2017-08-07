@@ -9,8 +9,9 @@ from . import checks as C
 from .base import Obj, SelectResult, Commands
 from ...web.exceptions import Forbidden, ObjectNotFound
 
-from .blogs import Blog
 from .posts import Post
+from .blogs import Blog
+from .comments import Comment
 
 __all__ = ('User',)
 
@@ -108,3 +109,6 @@ class User(Obj):
 
     async def posts(self) -> Tuple[Post, ...]:
         return await Post.select_by_owner(self._conn, self._uid, self.id)
+
+    async def comments(self) -> Tuple[Comment, ...]:
+        return await Comment.select_by_owner(self._conn, self._uid, self.id)

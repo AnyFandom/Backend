@@ -38,6 +38,7 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/users/{user:' + _arg + '}/history', views.UserHistory)
     url('*', '/users/{user:' + _arg + '}/blogs', views.UserBlogList)
     url('*', '/users/{user:' + _arg + '}/posts', views.UserPostList)
+    url('*', '/users/{user:' + _arg + '}/comments', views.UserCommentList)
 
     url('*', '/fandoms', views.fandoms.FandomList)
     url('*', '/fandoms/{fandom:' + _arg + '}', views.Fandom)
@@ -52,6 +53,8 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/fandoms/{fandom:' + _arg + '}/blogs/{blog:' + _arg + '}',
         views.FandomBlog)
     url('*', '/fandoms/{fandom:' + _arg + '}/posts', views.FandomPostList)
+    url('*', '/fandoms/{fandom:' + _arg + '}/comments',
+        views.FandomCommentList)
 
     url('*', '/blogs', views.BlogList)
     url('*', '/blogs/{blog:\w+}', views.Blog)
@@ -61,11 +64,18 @@ async def create_app(loop: asyncio.AbstractEventLoop,
     url('*', '/blogs/{blog:\w+}/bans', views.BlogBannedList)
     url('*', '/blogs/{blog:\w+}/bans/{banned:\w+}', views.BlogBanned)
     url('*', '/blogs/{blog:\w+}/posts', views.BlogPostList)
+    url('*', '/blogs/{blog:\w+}/comments', views.BlogCommentList)
 
     url('*', '/posts', views.PostList)
     url('*', '/posts/{post:\w+}', views.Post)
     url('*', '/posts/{post:\w+}/history', views.PostHistory)
     url('*', '/posts/{post:\w+}/votes', views.PostVoteList)
+    url('*', '/posts/{post:\w+}/comments', views.PostCommentList)
+
+    url('*', '/comments', views.CommentList)
+    url('*', '/comments/{comment:\w+}', views.Comment)
+    url('*', '/comments/{comment:\w+}/history', views.CommentHistory)
+    url('*', '/comments/{comment:\w+}/votes', views.CommentVoteList)
 
     if bool(int(config['test'])):
         print('RUNNING IN TEST MODE')

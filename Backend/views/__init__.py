@@ -8,6 +8,7 @@ from .users import *  # noqa
 from .fandoms import *  # noqa
 from .blogs import *  # noqa
 from .posts import *  # noqa
+from .comments import *  # noqa
 
 __all__ = (tests.__all__ +  # noqa
            root.__all__ +  # noqa
@@ -15,4 +16,5 @@ __all__ = (tests.__all__ +  # noqa
            users.__all__ +  # noqa
            fandoms.__all__ +  # noqa
            blogs.__all__ +  # noqa
-           posts.__all__)  # noqa
+           posts.__all__ +  # noqa
+           comments.__all__)  # noqa

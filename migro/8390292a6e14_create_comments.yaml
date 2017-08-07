@@ -1,0 +1,163 @@
+description: Create comments
+
+revision: 8390292a6e14
+down_revision: e430be9a4bf1
+
+upgrade: |
+  CREATE SEQUENCE comment_id_seq;
+  CREATE TABLE comments (
+    PRIMARY KEY (id),
+
+    id         BIGINT                    NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_at  TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by  BIGINT                    NOT NULL,
+    post_id    BIGINT                    NOT NULL,
+    blog_id    BIGINT                    NOT NULL,
+    fandom_id  BIGINT                    NOT NULL,
+    owner      BIGINT                    NOT NULL,
+    content    TEXT                      NOT NULL,
+    votes_up   INT DEFAULT 0             NOT NULL,
+    votes_down INT DEFAULT 0             NOT NULL
+  );
+  CREATE INDEX ON comments (post_id);
+  CREATE INDEX ON comments (blog_id);
+  CREATE INDEX ON comments (fandom_id);
+  CREATE INDEX ON comments (owner);
+
+  CREATE TABLE comments_history (
+    PRIMARY KEY (id, edited_at),
+
+    id        BIGINT                    NOT NULL,
+    edited_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    edited_by BIGINT                    NOT NULL,
+    content   TEXT                      NOT NULL
+  );
+
+  CREATE FUNCTION comments_insert () RETURNS TRIGGER AS $$
+    BEGIN
+
+      NEW.edited_at = NEW.created_at;
+      NEW.edited_by = NEW.owner;
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE FUNCTION comments_update () RETURNS TRIGGER AS $$
+    BEGIN
+
+      IF (NEW.votes_up, NEW.votes_down) != (OLD.votes_up, OLD.votes_down) THEN
+        RETURN NEW;
+      END IF;
+
+      NEW.edited_at = now();
+      NEW.content = COALESCE(NEW.content, OLD.content);
+
+      IF NEW.content = OLD.content THEN
+        RETURN NULL;
+      END IF;
+
+      INSERT INTO comments_history (id, edited_at, edited_by, content)
+      VALUES (OLD.id, OLD.edited_at, OLD.edited_by, OLD.content);
+
+      RETURN NEW;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER insert BEFORE INSERT ON comments FOR EACH ROW EXECUTE PROCEDURE comments_insert ();
+  CREATE TRIGGER update BEFORE UPDATE ON comments FOR EACH ROW EXECUTE PROCEDURE comments_update ();
+
+  CREATE FUNCTION comments_create (
+    user_id   BIGINT,
+    post_id   BIGINT,
+    blog_id   BIGINT,
+    fandom_id BIGINT,
+    content   TEXT
+  ) RETURNS BIGINT AS $$
+
+    INSERT INTO comments (id, post_id, blog_id, fandom_id, owner, content)
+    VALUES (nextval('comment_id_seq'), post_id, blog_id, fandom_id, user_id, content)
+    RETURNING id;
+
+  $$ LANGUAGE sql;
+
+  CREATE FUNCTION comments_history (
+    target_id BIGINT
+  ) RETURNS SETOF comments AS $$
+
+    SELECT * FROM comments WHERE id = target_id
+    UNION ALL
+    SELECT
+      c.id,
+      c.created_at,
+      ch.edited_at,
+      ch.edited_by,
+      c.post_id,
+      c.blog_id,
+      c.fandom_id,
+      c.owner,
+      ch.content,
+      0,
+      0
+    FROM comments_history AS ch
+    INNER JOIN comments AS c ON ch.id = c.id
+    WHERE ch.id = target_id;
+
+  $$ LANGUAGE sql;
+
+  CREATE TABLE comments_votes (
+    PRIMARY KEY (target_id, user_id),
+
+    target_id BIGINT  NOT NULL,
+    user_id   BIGINT  NOT NULL,
+    vote      BOOLEAN NOT NULL
+  );
+  CREATE INDEX ON comments_votes (vote);
+
+  CREATE FUNCTION comments_vote (
+    user_id   BIGINT,
+    target_id BIGINT,
+    vote      BOOLEAN
+  ) RETURNS void AS $$
+    #variable_conflict use_variable
+    BEGIN
+
+      INSERT INTO comments_votes VALUES (target_id, user_id, vote);
+
+      IF vote THEN
+        UPDATE comments SET votes_up = votes_up + 1 WHERE id = target_id;
+      ELSE
+        UPDATE comments SET votes_down = votes_down + 1 WHERE id = target_id;
+      END IF;
+
+    EXCEPTION
+      WHEN unique_violation THEN
+
+        UPDATE comments_votes SET vote = vote WHERE target_id = target_id AND user_id = user_id AND vote != vote;
+
+        IF FOUND THEN
+          IF vote THEN
+            UPDATE comments SET votes_up = votes_up + 1, votes_down = votes_down - 1 WHERE id = target_id;
+          ELSE
+            UPDATE comments SET votes_up = votes_up - 1, votes_down = votes_down + 1 WHERE id = target_id;
+          END IF;
+        END IF;
+
+    END;
+  $$ LANGUAGE plpgsql;
+
+downgrade: |
+  DROP FUNCTION comments_vote (BIGINT, BIGINT, BOOLEAN);
+  DROP TABLE comments_votes;
+  DROP FUNCTION comments_history (BIGINT);
+  DROP FUNCTION comments_create (BIGINT, BIGINT, BIGINT, BIGINT, TEXT);
+  DROP TRIGGER update ON comments;
+  DROP TRIGGER insert ON comments;
+  DROP FUNCTION comments_update ();
+  DROP FUNCTION comments_insert ();
+  DROP TABLE comments_history;
+  DROP TABLE comments;
+  DROP SEQUENCE comment_id_seq;
