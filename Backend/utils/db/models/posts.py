@@ -14,7 +14,6 @@ __all__ = ('Post', 'PostVote')
 
 class Post(Obj):
     _c = Commands(
-        # TODO: Добавить голоса за/против
         select="SELECT * FROM posts ORDER BY id ASC",
 
         # args: blog_id, post_ids
@@ -52,7 +51,7 @@ class Post(Obj):
         # args: post_id
         history="SELECT id, created_at, edited_at, edited_by, blog_id, "
                 "fandom_id, owner, title, content "
-                "FROM posts_history($1) ORDER BY edited_by DESC"
+                "FROM posts_history($1) ORDER BY edited_at DESC"
     )
 
     _type = 'posts'
@@ -118,6 +117,7 @@ class Post(Obj):
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
                      blog_id: int, fandom_id: int, fields: dict) -> int:
 
+        # Проверка
         if (
             not user_id or
             await C.blog_banned(conn, user_id, blog_id) or
@@ -133,7 +133,7 @@ class Post(Obj):
 
         # Проверка
         if (
-            self.id != self._uid and
+            self.attrs['owner'] != self._uid and
             not await C.blog_owner(
                 self._conn, self._uid, self.attrs['blog_id']) and
             not await C.blog_moder(
@@ -153,7 +153,7 @@ class Post(Obj):
 
         # Проверка
         if (
-            self.id != self._uid and
+            self.attrs['owner'] != self._uid and
             not await C.blog_owner(
                 self._conn, self._uid, self.attrs['blog_id']) and
             not await C.blog_moder(

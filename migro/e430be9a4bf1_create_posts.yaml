@@ -112,13 +112,13 @@ upgrade: |
   CREATE TABLE posts_votes (
     PRIMARY KEY (target_id, user_id),
 
-    target_id BIGINT NOT NULL,
-    user_id   BIGINT NOT NULL,
-    vote      BOOLEAN
+    target_id BIGINT  NOT NULL,
+    user_id   BIGINT  NOT NULL,
+    vote      BOOLEAN NOT NULL
   );
   CREATE INDEX ON posts_votes (vote);
 
-  CREATE FUNCTION posts_vote(
+  CREATE FUNCTION posts_vote (
     user_id   BIGINT,
     target_id BIGINT,
     vote      BOOLEAN
@@ -137,13 +137,13 @@ upgrade: |
     EXCEPTION
       WHEN unique_violation THEN
 
-        UPDATE posts_votes AS pv SET vote = vote WHERE pv.target_id = target_id AND pv.user_id = user_id AND pv.vote != vote;
+        UPDATE posts_votes SET vote = vote WHERE target_id = target_id AND user_id = user_id AND vote != vote;
 
         IF FOUND THEN
           IF vote THEN
             UPDATE posts SET votes_up = votes_up + 1, votes_down = votes_down - 1 WHERE id = target_id;
           ELSE
-            UPDATE posts SET votes_down = votes_down + 1, votes_up = votes_up - 1 WHERE id = target_id;
+            UPDATE posts SET votes_up = votes_up - 1, votes_down = votes_down + 1 WHERE id = target_id;
           END IF;
         END IF;
 
@@ -151,6 +151,7 @@ upgrade: |
   $$ LANGUAGE plpgsql;
 
 downgrade: |
+  DROP FUNCTION posts_vote (BIGINT, BIGINT, BOOLEAN);
   DROP TABLE posts_votes;
   DROP FUNCTION posts_history (BIGINT);
   DROP FUNCTION posts_create (BIGINT, BIGINT, BIGINT, TEXT, TEXT);
