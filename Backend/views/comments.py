@@ -4,7 +4,8 @@
 from ..utils.db import models as m
 from ..utils.web import BaseView, json_response, validators as v
 
-__all__ = ('CommentList', 'Comment', 'CommentHistory', 'CommentVoteList')
+__all__ = ('CommentList', 'Comment', 'CommentAnswers', 'CommentHistory',
+           'CommentVoteList')
 
 
 class CommentList(BaseView):
@@ -23,6 +24,20 @@ class Comment(BaseView):
     @v.get_body(v.comments.update)
     async def patch(self, body):
         await (await m.Comment.id_u(self.request)).update(body)
+
+
+class CommentAnswers(BaseView):
+    @json_response
+    async def get(self):
+        return await (await m.Comment.id_u(self.request)).answers()
+
+    @json_response
+    @v.get_body(v.comments.insert)
+    async def post(self, body):
+        new_id = await (await m.Comment.id_u(self.request)).insert_answer(body)
+        loc = f'/comments/{new_id}'
+
+        return {'Location': loc}, 201, {'Location': loc}
 
 
 class CommentHistory(BaseView):

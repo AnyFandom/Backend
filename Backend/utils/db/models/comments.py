@@ -36,11 +36,14 @@ class Comment(Obj):
         select_by_owner="SELECT * FROM comments WHERE owner = $1 "
                         "ORDER BY id ASC",
 
-        # args: user_id, post_id, blog_id, fandom_id, content
-        insert="SELECT comments_create ($1, $2, $3, $4, $5)",
+        # args: user_id, post_id, blog_id, fandom_id, parent_id, content
+        insert="SELECT comments_create ($1, $2, $3, $4, $5, $6)",
 
         # args: user_id, post_id, content
         update="UPDATE comments SET edited_by=$1, content=$3 WHERE id = $2",
+
+        # args: parent_id
+        answers="SELECT * FROM comments WHERE parent_id = $1 ORDER BY id ASC",
 
         # args: post_id
         history="SELECT id, created_at, edited_at, edited_by, post_id, "
@@ -100,7 +103,8 @@ class Comment(Obj):
 
     @classmethod
     async def insert(cls, conn: asyncpg.connection.Connection, user_id: int,
-                     post_id: int, blog_id: int, fandom_id: int, fields: dict
+                     post_id: int, blog_id: int, fandom_id: int,
+                     parent_id: int, fields: dict
                      ) -> int:
 
         # Проверка
@@ -112,7 +116,8 @@ class Comment(Obj):
             raise Forbidden
 
         return await cls._c.v.insert(
-            conn, user_id, post_id, blog_id, fandom_id, fields['content'])
+            conn, user_id, post_id, blog_id, fandom_id, parent_id,
+            fields['content'])
 
     async def update(self, fields: dict):
 
@@ -132,6 +137,17 @@ class Comment(Obj):
 
         await self._c.e.update(
             self._conn, self._uid, self.id, fields['content'])
+
+    async def answers(self) -> Tuple['Comment', ...]:
+
+        resp = await self._c.answers(self._conn, self.id)
+
+        return SelectResult(self.__class__(x) for x in resp)
+
+    async def insert_answer(self, fields: dict) -> int:
+        return await self.insert(
+            self._conn, self._uid, self.attrs['post_id'],
+            self.attrs['blog_id'], self.attrs['fandom_id'], self.id, fields)
 
     async def history(self) -> Tuple['Comment', ...]:
 
@@ -211,4 +227,3 @@ class CommentVote(Obj):
             raise Forbidden
 
         await cls._c.insert(conn, user_id, comment_id, fields['vote'])
-

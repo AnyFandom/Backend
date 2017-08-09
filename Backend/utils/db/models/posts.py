@@ -170,7 +170,7 @@ class Post(Obj):
 
         return await Comment.insert(
             self._conn, self._uid, self.id, self.attrs['blog_id'],
-            self.attrs['fandom_id'], fields)
+            self.attrs['fandom_id'], 0, fields)
 
 
 class PostVote(Obj):

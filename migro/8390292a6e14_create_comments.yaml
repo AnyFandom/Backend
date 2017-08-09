@@ -16,6 +16,7 @@ upgrade: |
     blog_id    BIGINT                    NOT NULL,
     fandom_id  BIGINT                    NOT NULL,
     owner      BIGINT                    NOT NULL,
+    parent_id  BIGINT                    NOT NULL,
     content    TEXT                      NOT NULL,
     votes_up   INT DEFAULT 0             NOT NULL,
     votes_down INT DEFAULT 0             NOT NULL
@@ -24,6 +25,7 @@ upgrade: |
   CREATE INDEX ON comments (blog_id);
   CREATE INDEX ON comments (fandom_id);
   CREATE INDEX ON comments (owner);
+  CREATE INDEX ON comments (parent_id);
 
   CREATE TABLE comments_history (
     PRIMARY KEY (id, edited_at),
@@ -75,11 +77,12 @@ upgrade: |
     post_id   BIGINT,
     blog_id   BIGINT,
     fandom_id BIGINT,
+    parent_id BIGINT,
     content   TEXT
   ) RETURNS BIGINT AS $$
 
-    INSERT INTO comments (id, post_id, blog_id, fandom_id, owner, content)
-    VALUES (nextval('comment_id_seq'), post_id, blog_id, fandom_id, user_id, content)
+    INSERT INTO comments (id, post_id, blog_id, fandom_id, owner, parent_id, content)
+    VALUES (nextval('comment_id_seq'), post_id, blog_id, fandom_id, user_id, parent_id, content)
     RETURNING id;
 
   $$ LANGUAGE sql;
@@ -99,6 +102,7 @@ upgrade: |
       c.blog_id,
       c.fandom_id,
       c.owner,
+      c.parent_id,
       ch.content,
       0,
       0

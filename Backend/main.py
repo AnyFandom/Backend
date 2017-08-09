@@ -74,6 +74,7 @@ async def create_app(loop: asyncio.AbstractEventLoop,
 
     url('*', '/comments', views.CommentList)
     url('*', '/comments/{comment:\w+}', views.Comment)
+    url('*', '/comments/{comment:\w+}/answers', views.CommentAnswers)
     url('*', '/comments/{comment:\w+}/history', views.CommentHistory)
     url('*', '/comments/{comment:\w+}/votes', views.CommentVoteList)
 
