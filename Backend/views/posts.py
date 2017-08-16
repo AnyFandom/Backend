@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from ..utils.db import models as m
+from ..utils.db import models as m, postgres
 from ..utils.web import BaseView, json_response, validators as v
 
 __all__ = ('PostList', 'Post', 'PostHistory', 'PostVoteList',
@@ -10,34 +10,40 @@ __all__ = ('PostList', 'Post', 'PostHistory', 'PostVoteList',
 
 class PostList(BaseView):
     @json_response
+    @postgres
     async def get(self):
         return await m.Post.select(self.request.conn, self.request.uid, 0, 0)
 
 
 class Post(BaseView):
     @json_response
+    @postgres
     async def get(self):
         return await m.Post.id_u(self.request)
 
     @json_response
     @v.get_body(v.posts.update)
+    @postgres
     async def patch(self, body):
         await (await m.Post.id_u(self.request)).update(body)
 
 
 class PostHistory(BaseView):
     @json_response
+    @postgres
     async def get(self):
         return await (await m.Post.id_u(self.request)).history()
 
 
 class PostVoteList(BaseView):
     @json_response
+    @postgres
     async def get(self):
         return await (await m.Post.id_u(self.request)).votes_select()
 
     @json_response
     @v.get_body(v.posts.votes_insert)
+    @postgres
     async def post(self, body):
         await (await m.Post.id_u(self.request)).votes_insert(body)
 
@@ -46,11 +52,13 @@ class PostVoteList(BaseView):
 
 class PostCommentList(BaseView):
     @json_response
+    @postgres
     async def get(self):
         return await (await m.Post.id_u(self.request)).comments_select()
 
     @json_response
     @v.get_body(v.comments.insert)
+    @postgres
     async def post(self, body):
         new_id = await (await m.Post.id_u(self.request)).comments_insert(body)
         loc = f'/comments/{new_id}'

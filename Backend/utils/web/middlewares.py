@@ -67,13 +67,3 @@ async def auth_middleware(app: web.Application, handler):
 
         return await handler(request)
     return middleware_handler
-
-
-async def database_middleware(app: web.Application, handler):
-    async def middleware_handler(request: Request):
-        request.conn = await app['db'].acquire()
-        try:
-            return await handler(request)
-        finally:
-            await app['db'].release(request.conn)
-    return middleware_handler

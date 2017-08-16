@@ -14,6 +14,7 @@ __all__ = ('register', 'login', 'refresh', 'invalidate', 'change', 'reset')
 
 @json_response
 @v.get_body(v.auth.register)
+@db.postgres
 async def register(request, body):
     """Регистрация нового пользователя"""
     new_id = await db.auth.register(
@@ -26,6 +27,7 @@ async def register(request, body):
 
 @json_response
 @v.get_body(v.auth.login)
+@db.postgres
 async def login(request, body):
     """Получение токенов по логину/паролю"""
     user_id, rand = await db.auth.login(
@@ -47,6 +49,7 @@ async def login(request, body):
 
 @json_response
 @v.get_body(v.auth.refresh)
+@db.postgres
 async def refresh(request, body):
     """Получение нового access токена по refresh токену"""
     decoded = decode_timed(
@@ -67,6 +70,7 @@ async def refresh(request, body):
 
 @json_response
 @v.get_body(v.auth.invalidate)
+@db.postgres
 async def invalidate(request, body):
     """Анулировать все refresh токены (access токены все еще действуют)"""
     await db.auth.invalidate(
@@ -76,6 +80,7 @@ async def invalidate(request, body):
 
 @json_response
 @v.get_body(v.auth.change)
+@db.postgres
 async def change(request, body):
     """Сменить пароль"""
     await db.auth.change(

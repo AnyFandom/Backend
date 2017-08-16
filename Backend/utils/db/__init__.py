@@ -2,6 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from . import auth, models
-from .db import DB
+from .db import DB, postgres
 
-__all__ = ('DB', 'auth', 'users', 'models')
+__all__ = ('DB', 'postgres', 'auth', 'users', 'models')

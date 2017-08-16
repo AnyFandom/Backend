@@ -4,6 +4,7 @@
 import asyncio
 
 import asyncpg
+import aiohttp.web_request
 
 
 class DB:
@@ -32,3 +33,24 @@ class DB:
 
     async def close(self):
         await self._pool.close()
+
+
+def postgres(func):
+    async def wrapped(*args, **kwargs):
+        if isinstance(args[0], aiohttp.web_request.Request):
+            args[0].conn = await args[0].app['db'].acquire()
+
+            try:
+                return await func(*args, **kwargs)
+            finally:
+                await args[0].app['db'].release(args[0].conn)
+
+        else:
+            args[0].request.conn = await args[0].request.app['db'].acquire()
+
+            try:
+                return await func(*args, **kwargs)
+            finally:
+                await args[0].request.app['db'].release(args[0].request.conn)
+
+    return wrapped
